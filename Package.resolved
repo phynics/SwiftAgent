@@ -1,0 +1,33 @@
+{
+  "originHash" : "f5c853eee27d99f7bb3645984a400f955c6b813d90818f0512db137526c0b5fb",
+  "pins" : [
+    {
+      "identity" : "jsonvalue",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/1amageek/JSONValue.git",
+      "state" : {
+        "branch" : "main",
+        "revision" : "067dcf205a3688bdd9a11928aeb83f3e61774271"
+      }
+    },
+    {
+      "identity" : "ollamakit",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/1amageek/OllamaKit.git",
+      "state" : {
+        "branch" : "main",
+        "revision" : "b49015d9379d0562c055cfd52d6bafa4651bb1de"
+      }
+    },
+    {
+      "identity" : "swift-argument-parser",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/apple/swift-argument-parser.git",
+      "state" : {
+        "branch" : "main",
+        "revision" : "41d58ffe702cfe7b00b2c4c6a6611d9d25a0adc1"
+      }
+    }
+  ],
+  "version" : 3
+}
