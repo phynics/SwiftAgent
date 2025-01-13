@@ -108,7 +108,7 @@ public struct FileSystemTool: Tool {
     {
       "operation": "write",
       "path": "notes/todo.txt",
-      "content": "Buy groceries\\nCall the doctor"
+      "content": "Buy groceries\nCall the doctor"
     }
     ```
     **Expected Output**:
@@ -135,7 +135,7 @@ public struct FileSystemTool: Tool {
     ```json
     {
       "success": true,
-      "content": "project1/\\nproject2/\\nREADME.md",
+      "content": "project1/\nproject2/\nREADME.md",
       "metadata": {
         "operation": "list",
         "path": "projects/",
@@ -155,7 +155,11 @@ public struct FileSystemTool: Tool {
     ```json
     {
       "success": false,
-      "error": "Path is not within working directory: ../../etc/passwd"
+      "content": "Path is not within working directory: ../../etc/passwd",
+      "metadata": {
+        "operation": "read",
+        "error": "Path is not within working directory: ../../etc/passwd"
+      }
     }
     ```
     """
@@ -184,7 +188,14 @@ public struct FileSystemTool: Tool {
     public func call(_ input: FileSystemInput) async throws -> FileSystemOutput {
         let normalizedPath = normalizePath(input.path)
         guard isPathSafe(normalizedPath) else {
-            throw ToolError.invalidParameters("Path is not within working directory: \(input.path)")
+            return FileSystemOutput(
+                success: false,
+                content: "Path is not within working directory: \(input.path)",
+                metadata: [
+                    "operation": input.operation.rawValue,
+                    "error": "Path is not within working directory: \(input.path)"
+                ]
+            )
         }
         
         switch input.operation {
@@ -192,7 +203,14 @@ public struct FileSystemTool: Tool {
             return try await readFile(at: normalizedPath)
         case .write:
             guard let content = input.content else {
-                throw ToolError.missingParameters(["content"])
+                return FileSystemOutput(
+                    success: false,
+                    content: "Missing content for write operation",
+                    metadata: [
+                        "operation": input.operation.rawValue,
+                        "error": "Missing content for write operation"
+                    ]
+                )
             }
             return try await writeFile(content: content, to: normalizedPath)
         case .list:
@@ -264,13 +282,27 @@ public struct FileSystemOutput: Codable, Sendable {
 private extension FileSystemTool {
     func readFile(at path: String) async throws -> FileSystemOutput {
         guard await fsActor.fileExists(atPath: path) else {
-            throw ToolError.executionFailed("File not found: \(path)")
+            return FileSystemOutput(
+                success: false,
+                content: "File not found: \(path)",
+                metadata: [
+                    "operation": "read",
+                    "error": "File not found: \(path)"
+                ]
+            )
         }
         
         do {
             let data = try Data(contentsOf: URL(fileURLWithPath: path))
             guard let content = String(data: data, encoding: .utf8) else {
-                throw ToolError.executionFailed("Could not read file as UTF-8 text")
+                return FileSystemOutput(
+                    success: false,
+                    content: "Could not read file as UTF-8 text",
+                    metadata: [
+                        "operation": "read",
+                        "error": "Could not read file as UTF-8 text"
+                    ]
+                )
             }
             
             return FileSystemOutput(
@@ -283,7 +315,14 @@ private extension FileSystemTool {
                 ]
             )
         } catch {
-            throw ToolError.executionFailed("Failed to read file: \(error.localizedDescription)")
+            return FileSystemOutput(
+                success: false,
+                content: "Failed to read file: \(error.localizedDescription)",
+                metadata: [
+                    "operation": "read",
+                    "error": "Failed to read file: \(error.localizedDescription)"
+                ]
+            )
         }
     }
     
@@ -300,7 +339,14 @@ private extension FileSystemTool {
                 ]
             )
         } catch {
-            throw ToolError.executionFailed("Failed to write file: \(error.localizedDescription)")
+            return FileSystemOutput(
+                success: false,
+                content: "Failed to write file: \(error.localizedDescription)",
+                metadata: [
+                    "operation": "write",
+                    "error": "Failed to write file: \(error.localizedDescription)"
+                ]
+            )
         }
     }
     
@@ -333,7 +379,14 @@ private extension FileSystemTool {
                 ]
             )
         } catch {
-            throw ToolError.executionFailed("Failed to list directory: \(error.localizedDescription)")
+            return FileSystemOutput(
+                success: false,
+                content: "Failed to list directory: \(error.localizedDescription)",
+                metadata: [
+                    "operation": "list",
+                    "error": "Failed to list directory: \(error.localizedDescription)"
+                ]
+            )
         }
     }
 }

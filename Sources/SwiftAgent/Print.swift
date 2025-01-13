@@ -37,7 +37,7 @@ public struct Print<S: Step>: Step {
     public func run(_ input: Input) async throws -> Output {
         // Print input
         if let transform = inputTransform {
-            print("\(prefix)Input: \(transform(input))")
+            print("\(prefix)\(transform(input))")
         } else {
             print("\(prefix)Input: \(String(describing: input))")
         }
@@ -47,7 +47,7 @@ public struct Print<S: Step>: Step {
         
         // Print output
         if let transform = outputTransform {
-            print("\(prefix)Output: \(transform(output))")
+            print("\(prefix)\(transform(output))")
         } else {
             print("\(prefix)Output: \(String(describing: output))")
         }

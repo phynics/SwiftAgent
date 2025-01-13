@@ -141,7 +141,10 @@ public struct ExecuteCommandTool: Tool {
     ```json
     {
       "success": false,
-      "error": "Unsafe command detected: rm -rf /"
+      "output": "Unsafe command detected: rm -rf /",
+      "metadata": {
+        "error": "Unsafe command detected: rm -rf /"
+      }
     }
     ```
     """
@@ -158,12 +161,24 @@ public struct ExecuteCommandTool: Tool {
     
     public func call(_ input: ExecuteCommandInput) async throws -> ExecuteCommandOutput {
         guard !input.command.isEmpty else {
-            throw ToolError.invalidParameters("Command cannot be empty")
+            return ExecuteCommandOutput(
+                success: false,
+                output: "Command cannot be empty",
+                metadata: [
+                    "error": "Command cannot be empty"
+                ]
+            )
         }
         
         let sanitizedCommand = sanitizeCommand(input.command)
         guard validateCommand(sanitizedCommand) else {
-            throw ToolError.invalidParameters("Unsafe command detected: \(input.command)")
+            return ExecuteCommandOutput(
+                success: false,
+                output: "Unsafe command detected: \(input.command)",
+                metadata: [
+                    "error": "Unsafe command detected: \(input.command)"
+                ]
+            )
         }
         
         return try await executeCommand(sanitizedCommand)
@@ -243,19 +258,36 @@ private extension ExecuteCommandTool {
                             ]
                         ))
                     } else {
-                        continuation.resume(throwing: ToolError.executionFailed(
-                            "Command failed with status \(process.terminationStatus): \(output)"
+                        continuation.resume(returning: ExecuteCommandOutput(
+                            success: false,
+                            output: output,
+                            metadata: [
+                                "status": "\(process.terminationStatus)",
+                                "command": command
+                            ]
                         ))
                     }
                 } catch {
-                    continuation.resume(throwing: error)
+                    continuation.resume(returning: ExecuteCommandOutput(
+                        success: false,
+                        output: "Failed to execute command: \(error.localizedDescription)",
+                        metadata: [
+                            "error": "Failed to execute command: \(error.localizedDescription)"
+                        ]
+                    ))
                 }
             }
             
             do {
                 try process.run()
             } catch {
-                continuation.resume(throwing: error)
+                continuation.resume(returning: ExecuteCommandOutput(
+                    success: false,
+                    output: "Failed to start command: \(error.localizedDescription)",
+                    metadata: [
+                        "error": "Failed to start command: \(error.localizedDescription)"
+                    ]
+                ))
             }
         }
     }

@@ -12,6 +12,11 @@ import OllamaKit
 
 /// OllamaKit based implementation of Model
 public struct OllamaModel: Model {
+    
+    public typealias Input = [OKChatRequestData.Message]
+
+    public typealias Output = String
+
   
     public var tools: [any Tool] = [
         FileSystemTool(workingDirectory: FileManager.default.currentDirectoryPath),
@@ -24,7 +29,7 @@ public struct OllamaModel: Model {
         self.systemPrompt = systemPrompt(tools)
     }
     
-    public func run(_ input: String) async throws -> String {
+    public func run(_ input: [OKChatRequestData.Message]) async throws -> String {
         let ollama = OllamaKit()
         let okTools = tools.map { tool -> OKTool in
                 .function(
@@ -35,15 +40,12 @@ public struct OllamaModel: Model {
                     )
                 )
         }
-        
+        let messages: [OKChatRequestData.Message] = [.system(systemPrompt)] + input
         let stream: AsyncThrowingStream<OKChatResponse, Error> = ollama
             .chat(
                 data: .init(
                     model: "llama3.2:latest",
-                    messages: [
-                        .system(systemPrompt),
-                        .user(input)
-                    ],
+                    messages: messages,
                     tools: okTools
                 )
             )
@@ -76,18 +78,14 @@ public struct OllamaModel: Model {
                                 let result = try await fileSystemTool.call(input)
                                 
                                 // 結果をモデルに返す
-                                output += "\nTool result: \(result.content)"
+                                output += "\n  Tool result: \(result.content)"
                             }
                         }
                     }
                 }
             }
             
-            // ストリームが完了した場合の処理
             if response.done {
-                if let doneReason = response.doneReason {
-                    output += "\nDone: \(doneReason)"
-                }
                 break
             }
         }

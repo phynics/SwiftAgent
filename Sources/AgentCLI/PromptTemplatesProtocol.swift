@@ -8,18 +8,12 @@ public struct PromptTemplates {
         """
         \(roleDescription())
         
-        SYSTEM INFORMATION:
-        Operating System: \(systemInfo.osName)
-        Default Shell: \(systemInfo.defaultShell)
-        Home Directory: \(systemInfo.homeDirectory)
-        Current Working Directory: \(workingDirectory)
-        Current Date: \(systemInfo.currentDate)
-        Current Time: \(systemInfo.currentTime)
-        
+        \(systemInfo.description)
+        ===
         \(toolUsageGuide(tools: tools))
-        
+        ---
         \(processGuidelines())
-        
+        ---
         EXAMPLES:
         \(toolExamples())
         """
@@ -35,10 +29,10 @@ public struct PromptTemplates {
     
     public func toolUsageGuide(tools: [any Tool]) -> String {
         """
-        AVAILABLE TOOLS:
+        [AVAILABLE TOOLS]:
         \(formatToolDescriptions(tools))
         
-        TOOL USAGE RULES:
+        [TOOL USAGE RULES]:
         1. Use only one tool at a time
         2. Format each tool use with proper XML tags
         3. Wait for success confirmation after each tool use
@@ -49,7 +43,7 @@ public struct PromptTemplates {
     
     public func processGuidelines() -> String {
         """
-        EXECUTION PROCESS:
+        [EXECUTION PROCESS]:
         1. Analyze each task thoroughly using <thinking></thinking> tags
         2. Break complex tasks into manageable steps
         3. Choose the most appropriate tool for each step

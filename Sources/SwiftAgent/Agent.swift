@@ -17,10 +17,10 @@ import Foundation
 public protocol Step<Input, Output> {
     
     /// The type of input required by the step.
-    associatedtype Input: Codable & Sendable
+    associatedtype Input: Sendable
     
     /// The type of output produced by the step.
-    associatedtype Output: Codable & Sendable
+    associatedtype Output: Sendable
     
     /// Executes the step with the given input and produces an output asynchronously.
     ///
@@ -40,13 +40,13 @@ public protocol Tool {
     ///
     /// The input type must conform to both `Codable` and `Sendable` to ensure it can be safely encoded,
     /// decoded, and used in concurrent contexts.
-    associatedtype Input: Codable & Sendable
+    associatedtype Input: Encodable & Sendable
     
     /// The type of output produced by the tool.
     ///
     /// The output type must conform to both `Codable` and `Sendable` to ensure it can be safely encoded,
     /// decoded, and used in concurrent contexts.
-    associatedtype Output: Codable & Sendable
+    associatedtype Output: Decodable & Sendable
     
     /// A unique name identifying the tool.
     ///
@@ -228,7 +228,7 @@ extension Agent {
 
 
 /// A step that does nothing and simply passes the input as the output.
-public struct EmptyStep<Input: Codable & Sendable>: Step {
+public struct EmptyStep<Input: Sendable>: Step {
     public typealias Output = Input
     
     @inlinable public init() {}
@@ -541,12 +541,12 @@ public struct Loop<S: Step>: Step where S.Input == S.Output {
     public typealias Output = S.Output
     
     private let maxIterations: Int
-    private let step: () -> S
+    private let step: (Input) -> S
     private let condition: (Output) async throws -> Bool
     
     public init(
         max: Int,
-        @StepBuilder step:  @escaping () -> S,
+        @StepBuilder step:  @escaping (Input) -> S,
         until condition: @escaping (Output) async throws -> Bool
     ) {
         self.maxIterations = max
@@ -557,7 +557,7 @@ public struct Loop<S: Step>: Step where S.Input == S.Output {
     public func run(_ input: Input) async throws -> Output {
         var current = input
         for _ in 0..<maxIterations {
-            let output = try await step().run(current)
+            let output = try await step(input).run(current)
             if try await condition(output) {
                 return output
             }
