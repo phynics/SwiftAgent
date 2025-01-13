@@ -6,28 +6,14 @@
 //
 
 import Foundation
-import SwiftUI
+@_exported import JSONSchema
 
-struct V: View {
-    var body: some View {
-        Text("a")
-            .bold()
-    }
-}
-
-struct A: App {
-
-    var body: some Scene {
-        WindowGroup {
-            
-        }
-    }
-}
-
-/// A protocol representing a single step in a process, which takes an input of a specific type
-/// and produces an output of another type.
+/// A protocol representing a single step in a process.
 ///
-/// - Note: The input and output types must conform to both `Codable` and `Sendable` protocols.
+/// `Step` takes an input of a specific type and produces an output of another type asynchronously.
+///
+/// - Note: The input and output types must conform to both `Codable` and `Sendable` to ensure
+///   compatibility with serialization and concurrency.
 public protocol Step<Input, Output> {
     
     /// The type of input required by the step.
@@ -40,59 +26,154 @@ public protocol Step<Input, Output> {
     ///
     /// - Parameter input: The input for the step.
     /// - Returns: The output produced by the step.
-    /// - Throws: An error if the step fails.
+    /// - Throws: An error if the step fails to execute or the input is invalid.
     func run(_ input: Input) async throws -> Output
 }
 
-/// A protocol representing a tool that can perform a specific operation using a name and description.
+/// A protocol that defines a tool with input, output, and functionality.
 ///
-/// - Note: The tool's operation is defined by its input and output types, which must conform to
-/// `Codable` and `Sendable`.
+/// `Tool` provides a standardized interface for tools that operate on specific input types
+/// to produce specific output types asynchronously.
 public protocol Tool {
     
     /// The type of input required by the tool.
+    ///
+    /// The input type must conform to both `Codable` and `Sendable` to ensure it can be safely encoded,
+    /// decoded, and used in concurrent contexts.
     associatedtype Input: Codable & Sendable
     
     /// The type of output produced by the tool.
+    ///
+    /// The output type must conform to both `Codable` and `Sendable` to ensure it can be safely encoded,
+    /// decoded, and used in concurrent contexts.
     associatedtype Output: Codable & Sendable
     
     /// A unique name identifying the tool.
+    ///
+    /// - Note: The `name` should be unique across all tools to avoid conflicts.
     var name: String { get }
     
     /// A description of what the tool does.
+    ///
+    /// - Note: Use this property to provide detailed information about the tool's purpose and functionality.
     var description: String { get }
     
-    /// Optional usage information about how to use the tool.
-    var usage: String? { get }
+    /// The JSON schema defining the structure of the tool's input and output.
+    ///
+    /// - Note: This schema ensures the tool's input and output adhere to a predefined format.
+    var parameters: JSONSchema { get }
+    
+    /// Detailed guide providing comprehensive information about how to use the tool.
+    ///
+    /// - Note:
+    ///   The `guide` should include the following sections:
+    ///
+    ///   1. **Tool Name**:
+    ///      - The unique name of the tool.
+    ///      - This name should be descriptive and clearly indicate the tool's purpose.
+    ///
+    ///   2. **Description**:
+    ///      - A concise explanation of the tool's purpose and functionality.
+    ///      - This section should help users understand what the tool does at a high level.
+    ///
+    ///   3. **Parameters**:
+    ///      - A list of all input parameters required or optional for using the tool.
+    ///      - For each parameter:
+    ///        - **Name**: The parameter name.
+    ///        - **Type**: The data type (e.g., `String`, `Int`).
+    ///        - **Description**: A short description of the parameter's role.
+    ///        - **Requirements**: Any constraints, such as valid ranges or allowed values.
+    ///
+    ///   4. **Usage**:
+    ///      - Instructions or guidelines for using the tool effectively.
+    ///      - This section should include any constraints, best practices, and common pitfalls.
+    ///      - For example, explain how to handle invalid inputs or edge cases.
+    ///
+    ///   5. **Examples**:
+    ///      - Provide practical examples demonstrating how to use the tool in real scenarios.
+    ///      - Examples should include valid inputs and expected outputs, formatted as code snippets.
+    ///
+    ///   Here is an example of what the `guide` might look like:
+    ///   ```markdown
+    ///   # Tool Name
+    ///   ExampleTool
+    ///
+    ///   ## Description
+    ///   This tool calculates the length of a string.
+    ///
+    ///   ## Parameters
+    ///   - `input`: The string whose length will be calculated.
+    ///     - **Type**: `String`
+    ///     - **Description**: The input text to process.
+    ///     - **Requirements**: Must not be empty or null.
+    ///
+    ///   ## Usage
+    ///   - Input strings must be UTF-8 encoded.
+    ///   - Ensure the string contains at least one character.
+    ///   - Avoid using strings containing unsupported characters.
+    ///
+    ///   ## Examples
+    ///   ### Basic Usage
+    ///   ```xml
+    ///   <example_tool>
+    ///   <input>Hello, world!</input>
+    ///   </example_tool>
+    ///   ```
+    ///
+    ///   ### Edge Case
+    ///   ```xml
+    ///   <example_tool>
+    ///   <input> </input> <!-- Invalid: whitespace-only string -->
+    ///   </example_tool>
+    ///   ```
+    ///   ```
+    var guide: String? { get }
+
     
     /// Executes the tool's operation with the given input and produces an output asynchronously.
     ///
-    /// - Parameter input: The input for the tool.
-    /// - Returns: The output produced by the tool.
-    /// - Throws: An error if the tool fails.
+    /// - Parameter input: The input for the tool, which must conform to the `Input` type.
+    /// - Returns: The output produced by the tool, which conforms to the `Output` type.
+    /// - Throws: An error if the tool fails to execute or if the input is invalid.
+    ///
+    /// Example usage:
+    /// ```swift
+    /// struct ExampleTool: Tool {
+    ///     typealias Input = String
+    ///     typealias Output = Int
+    ///
+    ///     let name = "ExampleTool"
+    ///     let description = "A tool that calculates the length of a string."
+    ///     let schema = JSONSchema.string(description: "Input string")
+    ///     let usage: String? = "Provide a string as input to calculate its length."
+    ///
+    ///     func call(_ input: String) async throws -> Int {
+    ///         return input.count
+    ///     }
+    /// }
+    /// ```
     func call(_ input: Input) async throws -> Output
 }
 
-/// Errors that can occur during tool execution
+/// Errors that can occur during tool execution.
 public enum ToolError: Error {
-    /// Required parameters are missing
+    
+    /// Required parameters are missing.
     case missingParameters([String])
     
-    /// Parameters are invalid
+    /// Parameters are invalid.
     case invalidParameters(String)
     
-    /// Tool execution failed
+    /// Tool execution failed.
     case executionFailed(String)
     
-    /// A localized description of the error
+    /// A localized description of the error.
     public var localizedDescription: String {
         switch self {
         case .missingParameters(let params):
             return "Missing required parameters: \(params.joined(separator: ", "))"
-            
         case .invalidParameters(let message):
             return "Invalid parameters: \(message)"
-            
         case .executionFailed(let message):
             return "Execution failed: \(message)"
         }
@@ -101,34 +182,49 @@ public enum ToolError: Error {
 
 /// A protocol representing a language model (LLM), which extends the `Step` protocol.
 ///
-/// - Note: Models define a system prompt and can utilize a set of tools to assist in their operations.
+/// `Model` defines a system prompt and can utilize a set of tools to assist in its operations.
 public protocol Model: Step {
     
     /// The system prompt used by the model.
+    ///
+    /// - Note: This prompt serves as the base context for the model's behavior.
     var systemPrompt: String { get }
     
     /// A collection of tools available to the model for assisting in its operations.
+    ///
+    /// - Note: Tools can be used by the model to perform specialized tasks.
     var tools: [any Tool] { get }
 }
 
 /// A protocol representing an agent, which acts as a composite step by combining multiple steps.
 ///
-/// - Note: Agents are composed of a body that defines their behavior.
+/// `Agent` is composed of a body that defines its behavior and operates as a higher-level abstraction
+/// over individual steps.
+///
+/// - Note: The `Input` and `Output` types of the `Agent` match those of its `Body`.
 public protocol Agent: Step where Input == Body.Input, Output == Body.Output {
     
     /// The type of the body, which must conform to `Step`.
     associatedtype Body: Step
     
     /// A builder property that defines the body of the agent.
+    ///
+    /// - Note: The body determines how the agent processes its input and generates its output.
     @StepBuilder var body: Self.Body { get }
 }
 
 extension Agent {
     
+    /// Executes the agent's operation by delegating to its body.
+    ///
+    /// - Parameter input: The input for the agent.
+    /// - Returns: The output produced by the agent's body.
+    /// - Throws: An error if the agent's body fails to execute.
     public func run(_ input: Input) async throws -> Output {
         try await body.run(input)
     }
 }
+
 
 
 /// A step that does nothing and simply passes the input as the output.

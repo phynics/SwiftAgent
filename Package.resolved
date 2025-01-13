@@ -1,22 +1,13 @@
 {
-  "originHash" : "f5c853eee27d99f7bb3645984a400f955c6b813d90818f0512db137526c0b5fb",
+  "originHash" : "b037a9ad18fc79774023a3d831c0273ab6b4e51acb2c38d085d3f69cd465b2ae",
   "pins" : [
-    {
-      "identity" : "jsonvalue",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/1amageek/JSONValue.git",
-      "state" : {
-        "branch" : "main",
-        "revision" : "067dcf205a3688bdd9a11928aeb83f3e61774271"
-      }
-    },
     {
       "identity" : "ollamakit",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/1amageek/OllamaKit.git",
       "state" : {
         "branch" : "main",
-        "revision" : "b49015d9379d0562c055cfd52d6bafa4651bb1de"
+        "revision" : "691604d081e1964f518013e3a291f628a3ac6828"
       }
     },
     {
@@ -26,6 +17,15 @@
       "state" : {
         "branch" : "main",
         "revision" : "41d58ffe702cfe7b00b2c4c6a6611d9d25a0adc1"
+      }
+    },
+    {
+      "identity" : "swift-json-schema",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/kevinhermawan/swift-json-schema.git",
+      "state" : {
+        "revision" : "4a9284e44d8ef2bfc863734e9ff535909ae6b27a",
+        "version" : "2.0.1"
       }
     }
   ],

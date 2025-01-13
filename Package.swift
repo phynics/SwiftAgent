@@ -17,12 +17,14 @@ let package = Package(
     dependencies: [
         .package(url: "https://github.com/apple/swift-argument-parser.git", branch: "main"),
         .package(url: "https://github.com/1amageek/OllamaKit.git", branch: "main"),
-        .package(url: "https://github.com/1amageek/JSONValue.git", branch: "main")
+        .package(url: "https://github.com/kevinhermawan/swift-json-schema.git", .upToNextMajor(from: "2.0.1"))
     ],
     targets: [
         .target(
             name: "SwiftAgent",
-            dependencies: ["JSONValue"]
+            dependencies: [
+                .product(name: "JSONSchema", package: "swift-json-schema")
+            ]
         ),
         .target(
             name: "AgentTools",
@@ -33,7 +35,6 @@ let package = Package(
             dependencies: [
                 "SwiftAgent",
                 "OllamaKit",
-                "JSONValue",
                 "AgentTools",
                 .product(name: "ArgumentParser", package: "swift-argument-parser")
             ]

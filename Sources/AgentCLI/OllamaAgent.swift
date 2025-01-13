@@ -18,6 +18,13 @@ public struct OllamaAgent: Agent {
     public init() {}
     
     public var body: some Step<Input, Output> {
-        OllamaModel("ユーザーの指示に従って操作を行ってください。").log()
+        OllamaModel { tools in
+            PromptTemplates()
+                .systemPrompt(
+                    tools: tools,
+                    workingDirectory: FileManager.default.currentDirectoryPath,
+                    systemInfo: SystemInfo()
+                )
+        }.log()
     }
 }

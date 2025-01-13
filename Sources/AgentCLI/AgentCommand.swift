@@ -34,15 +34,6 @@ struct AgentCommand: AsyncParsableCommand {
         @Argument(help: "Maximum number of steps")
         var maxSteps: Int = 10
         
-        @Argument(help: "Ollama model to use")
-        var model: String = "phi4:latest"
-        
-        @Argument(help: "Ollama base URL")
-        var baseURL: String = "http://localhost:11434"
-        
-        @Flag(name: .shortAndLong, help: "Show detailed thought process")
-        var verbose: Bool = false
-        
         @Flag(name: .shortAndLong, help: "Show only the final answer")
         var quiet: Bool = false
         
@@ -52,7 +43,6 @@ struct AgentCommand: AsyncParsableCommand {
             guard !prompt.isEmpty else {
                 throw ValidationError("Prompt cannot be empty")
             }
-            
             let output = try await OllamaAgent().run(prompt)
             print(output)
         }

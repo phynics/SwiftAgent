@@ -13,48 +13,25 @@ import OllamaKit
 /// OllamaKit based implementation of Model
 public struct OllamaModel: Model {
   
-    public var tools: [any Tool] = [FileSystemTool(workingDirectory: FileManager.default.currentDirectoryPath)]
+    public var tools: [any Tool] = [
+        FileSystemTool(workingDirectory: FileManager.default.currentDirectoryPath),
+        ExecuteCommandTool()
+    ]
     
     public var systemPrompt: String
     
-    public init(_ systemPrompt: String) {
-        self.systemPrompt = systemPrompt
+    public init(_ systemPrompt: ([any Tool]) -> String) {
+        self.systemPrompt = systemPrompt(tools)
     }
     
     public func run(_ input: String) async throws -> String {
         let ollama = OllamaKit()
-        
         let okTools = tools.map { tool -> OKTool in
                 .function(
                     OKFunction(
                         name: tool.name,
                         description: tool.description,
-                        parameters: .object([
-                            "type": .string("object"),
-                            "properties": .object([
-                                "operation": .object([
-                                    "type": .string("string"),
-                                    "description": .string("The operation to perform (read/write/list)"),
-                                    "enum": .array([
-                                        .string("read"),
-                                        .string("write"),
-                                        .string("list")
-                                    ])
-                                ]),
-                                "path": .object([
-                                    "type": .string("string"),
-                                    "description": .string("Path to file or directory")
-                                ]),
-                                "content": .object([
-                                    "type": .string("string"),
-                                    "description": .string("Content to write (for write operation)")
-                                ])
-                            ]),
-                            "required": .array([
-                                .string("operation"),
-                                .string("path")
-                            ])
-                        ])
+                        parameters: tool.parameters
                     )
                 )
         }
