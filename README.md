@@ -76,17 +76,76 @@ public protocol Step<Input, Output> {
 
 ### Tools
 
-Tools represent capabilities that can be used by agents:
+Tools are special types of Steps that represent capabilities that can be used by agents. They provide a standardized interface for external operations and include comprehensive documentation:
 
 ```swift
-public protocol Tool {
-    associatedtype Input: Codable & Sendable
-    associatedtype Output: Codable & Sendable
-    
+public protocol Tool: Identifiable, Step where Input: Codable, Output: Codable & CustomStringConvertible {
+    /// A unique name identifying the tool
     var name: String { get }
+    
+    /// A description of what the tool does
     var description: String { get }
     
-    func call(_ input: Input) async throws -> Output
+    /// JSON schema defining the tool's input/output structure
+    var parameters: JSONSchema { get }
+    
+    /// Detailed guide for using the tool
+    var guide: String? { get }
+}
+```
+
+Tools must include:
+- Unique identifying name
+- Description of functionality
+- JSON schema for input/output validation
+- Optional detailed usage guide with examples
+- Implementation of the `run` method from the `Step` protocol
+
+Example of implementing a tool:
+
+```swift
+struct SearchTool: Tool {
+    var name: String { "search" }
+    var description: String { "Searches the web for information" }
+    
+    var parameters: JSONSchema {
+        .object(
+            title: "SearchParameters",
+            properties: [
+                "query": .string(description: "The search query"),
+                "limit": .integer(description: "Maximum number of results", default: 10)
+            ],
+            required: ["query"]
+        )
+    }
+    
+    var guide: String? {
+        """
+        # Search Tool
+        
+        Performs web searches and returns relevant results.
+        
+        ## Parameters
+        - query: Search terms (required)
+        - limit: Max results (optional, default: 10)
+        
+        ## Usage
+        - Provide specific search terms
+        - Results are ranked by relevance
+        
+        ## Examples
+        ```json
+        {
+            "query": "Swift programming",
+            "limit": 5
+        }
+        ```
+        """
+    }
+    
+    func run(_ input: Input) async throws -> Output {
+        // Implementation
+    }
 }
 ```
 
