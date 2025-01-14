@@ -18,6 +18,34 @@ SwiftAgent is a powerful Swift framework that enables declarative development of
 
 - Swift 6.0+
 - iOS 18.0+ / macOS 15.0+
+- Ollama installed (for Ollama integration)
+- Anthropic API key (for Claude integration)
+- OpenAI API key (for OpenAI integration)
+
+## Development Setup
+
+### 1. Install Ollama
+
+Install Ollama following the official instructions at [Ollama Installation Guide](https://ollama.ai/download).
+
+### 2. Configure API Keys
+
+Add the following environment variables to your Xcode scheme:
+
+1. Open your Xcode project
+2. Go to Edit Scheme (⌘ + <)
+3. Select "Run" from the left sidebar
+4. Go to the "Arguments" tab
+5. Under "Environment Variables", add:
+   - `ANTHROPIC_API_KEY`: Your Anthropic API key
+   - `OPENAI_API_KEY`: Your OpenAI API key
+
+You can also add these to your environment:
+
+```bash
+export ANTHROPIC_API_KEY=your_api_key_here
+export OPENAI_API_KEY=your_api_key_here
+```
 
 ## Installation
 
