@@ -34,19 +34,7 @@ public protocol Step<Input, Output> {
 ///
 /// `Tool` provides a standardized interface for tools that operate on specific input types
 /// to produce specific output types asynchronously.
-public protocol Tool {
-    
-    /// The type of input required by the tool.
-    ///
-    /// The input type must conform to both `Codable` and `Sendable` to ensure it can be safely encoded,
-    /// decoded, and used in concurrent contexts.
-    associatedtype Input: Encodable & Sendable
-    
-    /// The type of output produced by the tool.
-    ///
-    /// The output type must conform to both `Codable` and `Sendable` to ensure it can be safely encoded,
-    /// decoded, and used in concurrent contexts.
-    associatedtype Output: Decodable & Sendable
+public protocol Tool: Identifiable, Step where Input: Codable, Output: Codable & CustomStringConvertible {
     
     /// A unique name identifying the tool.
     ///
@@ -128,31 +116,39 @@ public protocol Tool {
     ///   ```
     ///   ```
     var guide: String? { get }
+}
 
+extension Tool {
     
-    /// Executes the tool's operation with the given input and produces an output asynchronously.
-    ///
-    /// - Parameter input: The input for the tool, which must conform to the `Input` type.
-    /// - Returns: The output produced by the tool, which conforms to the `Output` type.
-    /// - Throws: An error if the tool fails to execute or if the input is invalid.
-    ///
-    /// Example usage:
-    /// ```swift
-    /// struct ExampleTool: Tool {
-    ///     typealias Input = String
-    ///     typealias Output = Int
-    ///
-    ///     let name = "ExampleTool"
-    ///     let description = "A tool that calculates the length of a string."
-    ///     let schema = JSONSchema.string(description: "Input string")
-    ///     let usage: String? = "Provide a string as input to calculate its length."
-    ///
-    ///     func call(_ input: String) async throws -> Int {
-    ///         return input.count
-    ///     }
-    /// }
-    /// ```
-    func call(_ input: Input) async throws -> Output
+    public var id: String { name }
+    
+    public func call(_ arguments: any Encodable) async throws -> String {
+        let jsonData = try JSONEncoder().encode(arguments)
+        let args: Self.Input = try JSONDecoder().decode(
+            Input.self,
+            from: jsonData
+        )
+        do {
+            let result = try await run(args)
+
+            return "\(result)"
+        } catch {
+            return "[\(name)] has Error: \(error)"
+        }
+    }
+    
+    public func call(data: Data) async throws -> String {
+        let args: Self.Input = try JSONDecoder().decode(
+            Input.self,
+            from: data
+        )
+        do {
+            let result = try await run(args)
+            return "\(result)"
+        } catch {
+            return "[\(name)] has Error: \(error)"
+        }
+    }
 }
 
 /// Errors that can occur during tool execution.
@@ -224,7 +220,6 @@ extension Agent {
         try await body.run(input)
     }
 }
-
 
 
 /// A step that does nothing and simply passes the input as the output.

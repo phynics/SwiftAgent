@@ -185,7 +185,7 @@ public struct FileSystemTool: Tool {
         self.fsActor = FileSystemActor()
     }
     
-    public func call(_ input: FileSystemInput) async throws -> FileSystemOutput {
+    public func run(_ input: FileSystemInput) async throws -> FileSystemOutput {
         let normalizedPath = normalizePath(input.path)
         guard isPathSafe(normalizedPath) else {
             return FileSystemOutput(
@@ -254,7 +254,7 @@ public struct FileSystemInput: Codable, Sendable {
 }
 
 /// The output structure for file system operations.
-public struct FileSystemOutput: Codable, Sendable {
+public struct FileSystemOutput: Codable, Sendable, CustomStringConvertible {
     /// Whether the operation was successful.
     public let success: Bool
     
@@ -274,6 +274,16 @@ public struct FileSystemOutput: Codable, Sendable {
         self.success = success
         self.content = content
         self.metadata = metadata
+    }
+    
+    public var description: String {
+        let status = success ? "Success" : "Failed"
+        let metadataString = metadata.isEmpty ? "" : "\nMetadata:\n" + metadata.map { "  \($0.key): \($0.value)" }.joined(separator: "\n")
+        
+        return """
+        FileSystem Operation [\(status)]
+        Content: \(content)\(metadataString)
+        """
     }
 }
 

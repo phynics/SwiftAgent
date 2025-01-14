@@ -159,7 +159,7 @@ public struct ExecuteCommandTool: Tool {
     
     public init() {}
     
-    public func call(_ input: ExecuteCommandInput) async throws -> ExecuteCommandOutput {
+    public func run(_ input: ExecuteCommandInput) async throws -> ExecuteCommandOutput {
         guard !input.command.isEmpty else {
             return ExecuteCommandOutput(
                 success: false,
@@ -202,7 +202,7 @@ public struct ExecuteCommandInput: Codable, Sendable {
 }
 
 /// The output structure for command execution.
-public struct ExecuteCommandOutput: Codable, Sendable {
+public struct ExecuteCommandOutput: Codable, Sendable, CustomStringConvertible {
     /// Whether the command was executed successfully.
     public let success: Bool
     
@@ -222,6 +222,16 @@ public struct ExecuteCommandOutput: Codable, Sendable {
         self.success = success
         self.output = output
         self.metadata = metadata
+    }
+    
+    public var description: String {
+        let status = success ? "Success" : "Failed"
+        let metadataString = metadata.isEmpty ? "" : "\nMetadata:\n" + metadata.map { "  \($0.key): \($0.value)" }.joined(separator: "\n")
+        
+        return """
+        Command Execution [\(status)]
+        Output: \(output)\(metadataString)
+        """
     }
 }
 

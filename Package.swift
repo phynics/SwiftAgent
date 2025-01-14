@@ -16,8 +16,10 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-argument-parser.git", branch: "main"),
+        .package(url: "https://github.com/1amageek/swift-json-schema.git", branch: "main"),
         .package(url: "https://github.com/1amageek/OllamaKit.git", branch: "main"),
-        .package(url: "https://github.com/kevinhermawan/swift-json-schema.git", .upToNextMajor(from: "2.0.1"))
+        .package(url: "https://github.com/jamesrochabrun/SwiftAnthropic.git", branch: "main"),
+        .package(url: "https://github.com/MacPaw/OpenAI.git", branch: "main")
     ],
     targets: [
         .target(
@@ -36,7 +38,12 @@ let package = Package(
                 "SwiftAgent",
                 "OllamaKit",
                 "AgentTools",
+                "SwiftAnthropic",
+                "OpenAI",
                 .product(name: "ArgumentParser", package: "swift-argument-parser")
+            ],
+            swiftSettings: [
+                .define("ANTHROPIC_API_KEY")
             ]
         ),
         .testTarget(

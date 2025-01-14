@@ -43,7 +43,7 @@ struct AgentCommand: AsyncParsableCommand {
             guard !prompt.isEmpty else {
                 throw ValidationError("Prompt cannot be empty")
             }
-            let output = try await OllamaAgent().run(prompt)
+            let output = try await MainAgent().run(prompt)
             print(output)
         }
     }
