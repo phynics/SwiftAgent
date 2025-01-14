@@ -11,6 +11,8 @@ SwiftAgent is a powerful Swift framework that enables declarative development of
 - 📦 **Modular Design**: Create reusable agent components
 - 🔄 **Async/Await Support**: Built for modern Swift concurrency
 - 🎭 **Protocol-Based**: Flexible and extensible architecture
+- 📊 **State Management**: Powerful state management with Memory and Relay
+- 🔍 **Monitoring**: Built-in monitoring capabilities for debugging and logging
 
 ## Requirements
 
@@ -29,7 +31,7 @@ dependencies: [
 ]
 ```
 
-## Basic Concepts
+## Core Components
 
 ### Steps
 
@@ -60,35 +62,103 @@ public protocol Tool {
 }
 ```
 
-### Agents
+### State Management
 
-Agents combine steps and tools into cohesive workflows:
+SwiftAgent provides two powerful state management mechanisms: Memory and Relay.
+
+#### Memory
+
+Memory is a property wrapper that stores state and provides a Relay projection:
 
 ```swift
-struct SearchAgent: Agent {
+struct ChatAgent: Agent {
+    @Memory private var messages: [Message] = []  // State storage
+    @Memory private var context: Context = .init() // Another state
+    
     var body: some Step<String, String> {
-        ModelStep()
-        SearchTool()
-        SummarizationStep()
+        MessageTransform(messages: $messages)  // Pass as a binding
+        ProcessStep(context: $context)         // Access state via binding
     }
 }
 ```
 
-## Usage Examples
+#### Relay
 
-### Creating a Simple Agent
+Relay provides a dynamic way to access and modify state:
 
 ```swift
-struct WeatherAgent: Agent {
-    var body: some Step<String, WeatherResponse> {
-        // Parse user query
-        QueryParsingStep()
+struct ProcessStep: Step {
+    @Relay var messages: [Message]    // Receives state from parent
+    @Relay var context: Context       // Another state reference
+    
+    func run(_ input: String) async throws -> String {
+        messages.append(Message(content: input))  // Modify state
+        context.updateWithMessage(input)          // Update context
+        return "Processed: \(input)"
+    }
+}
+```
+
+### Monitoring
+
+SwiftAgent includes built-in monitoring capabilities through the Monitor step wrapper:
+
+```swift
+struct LoggingAgent: Agent {
+    var body: some Step<String, String> {
+        ProcessStep()
+            .monitor(
+                input: { input in
+                    print("Received input: \(input)")
+                },
+                output: { output in
+                    print("Produced output: \(output)")
+                }
+            )
+    }
+}
+```
+
+You can also monitor just inputs or outputs:
+
+```swift
+ProcessStep()
+    .onInput { input in 
+        print("Input received: \(input)")
+    }
+
+ProcessStep()
+    .onOutput { output in
+        print("Output produced: \(output)")
+    }
+```
+
+## Usage Examples
+
+### Creating a Chat Agent
+
+```swift
+struct ChatAgent: Agent {
+    @Memory private var messages: [Message] = []
+    
+    var body: some Step<String, String> {
+        // Transform input into messages
+        MessageTransform(messages: $messages)
         
-        // Fetch weather data
-        WeatherTool()
+        // Process with LLM
+        OllamaModel(model: "llama2", tools: [
+            SearchTool(),
+            CalculatorTool()
+        ]) { tools in
+            "You are a helpful assistant"
+        }
+        .monitor(
+            input: { print("Model input: \($0)") },
+            output: { print("Model output: \($0)") }
+        )
         
-        // Format response
-        ResponseFormattingStep()
+        // Store assistant response
+        MessageStore(messages: $messages)
     }
 }
 ```
@@ -97,11 +167,13 @@ struct WeatherAgent: Agent {
 
 ```swift
 struct SmartAgent: Agent {
+    @Memory private var context: Context = .init()
+    
     var body: some Step<Query, Response> {
-        if condition {
-            StepA()
+        if context.requiresSearch {
+            SearchStep()
         } else {
-            StepB()
+            DirectResponseStep()
         }
     }
 }
@@ -111,9 +183,11 @@ struct SmartAgent: Agent {
 
 ```swift
 struct IterativeAgent: Agent {
+    @Memory private var state: ProcessingState = .init()
+    
     var body: some Step<Data, Result> {
-        Loop(max: 5) {
-            ProcessingStep()
+        Loop(max: 5) { input in
+            ProcessingStep(state: $state)
         } until: { result in
             result.isComplete
         }
