@@ -27,18 +27,21 @@ public struct OllamaAgent: Agent {
             FileSystemTool(workingDirectory: FileManager.default.currentDirectoryPath),
             ExecuteCommandTool()
         ]) { tools in
-            PromptTemplates()
+            PromptTemplates
                 .systemPrompt(
                     tools: tools,
                     workingDirectory: FileManager.default.currentDirectoryPath,
                     systemInfo: SystemInfo()
                 )
         }
-        .log { input in
-            return "User: \(input.last?.content ?? "")"
-        } outputTransform: { output in
-            return "Assistant: \(output)"
-        }
+        .monitor(
+            input: { input in
+                print("Step received input: \(input)")
+            },
+            output: { output in
+                print("Step produced output: \(output)")
+            }
+        )
         OllamaMessageStore(messages: $messages)
     }
 }

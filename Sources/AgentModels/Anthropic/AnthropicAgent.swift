@@ -28,24 +28,21 @@ public struct AnthropicAgent: Agent {
             FileSystemTool(workingDirectory: FileManager.default.currentDirectoryPath),
             ExecuteCommandTool()
         ]) { tools in
-            PromptTemplates()
+            PromptTemplates
                 .systemPrompt(
                     tools: tools,
                     workingDirectory: FileManager.default.currentDirectoryPath,
                     systemInfo: SystemInfo()
                 )
         }
-        .log { input in
-            if let last = input.last {
-                switch last.content {
-                case .text(let text): return "User: \(text)"
-                default: return "x"
-                }
+        .monitor(
+            input: { input in
+                print("Step received input: \(input)")
+            },
+            output: { output in
+                print("Step produced output: \(output)")
             }
-            return "-"
-        } outputTransform: { output in
-            return "Assistant: \(output)"
-        }
+        )
         AnthropicMessageStore(messages: $messages)
     }
 }

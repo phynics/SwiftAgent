@@ -11,12 +11,15 @@ let package = Package(
             name: "SwiftAgent",
             targets: ["SwiftAgent"]),
         .library(
+            name: "AgentModels",
+            targets: ["AgentTools"]),
+        .library(
             name: "AgentTools",
             targets: ["AgentTools"]),
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-argument-parser.git", branch: "main"),
-        .package(url: "https://github.com/1amageek/swift-json-schema.git", branch: "main"),
+        .package(url: "https://github.com/kevinhermawan/swift-json-schema.git", branch: "main"),
         .package(url: "https://github.com/1amageek/OllamaKit.git", branch: "main"),
         .package(url: "https://github.com/jamesrochabrun/SwiftAnthropic.git", branch: "main"),
         .package(url: "https://github.com/MacPaw/OpenAI.git", branch: "main")
@@ -29,6 +32,10 @@ let package = Package(
             ]
         ),
         .target(
+            name: "AgentModels",
+            dependencies: ["SwiftAgent"]
+        ),
+        .target(
             name: "AgentTools",
             dependencies: ["SwiftAgent"]
         ),
@@ -36,10 +43,11 @@ let package = Package(
             name: "AgentCLI",
             dependencies: [
                 "SwiftAgent",
-                "OllamaKit",
                 "AgentTools",
+                "AgentModels",
                 "SwiftAnthropic",
                 "OpenAI",
+                "OllamaKit",
                 .product(name: "ArgumentParser", package: "swift-argument-parser")
             ],
             swiftSettings: [

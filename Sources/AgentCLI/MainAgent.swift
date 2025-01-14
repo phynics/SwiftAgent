@@ -7,12 +7,13 @@
 
 import Foundation
 import SwiftAgent
+import AgentModels
 
 public struct MainAgent: Agent {
 
     public var body: some Step<String, String> {
         Loop(max: 2) { input in
-            OpenAIAgent()
+            OllamaAgent()
         } until: { output in
             return !output.contains("error")
         }

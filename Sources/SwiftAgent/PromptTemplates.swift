@@ -1,10 +1,8 @@
 import Foundation
-import SwiftAgent
 
 public struct PromptTemplates {
-    public init() {}
     
-    public func systemPrompt(tools: [any Tool], workingDirectory: String, systemInfo: SystemInfo) -> String {
+    public static func systemPrompt(tools: [any Tool], workingDirectory: String, systemInfo: SystemInfo) -> String {
         """
         \(roleDescription())
         
@@ -19,7 +17,7 @@ public struct PromptTemplates {
         """
     }
     
-    public func roleDescription() -> String {
+    static func roleDescription() -> String {
         """
         You are an AI agent with advanced capabilities in problem-solving and task execution.
         You approach tasks methodically, breaking them down into clear steps and executing them precisely.
@@ -27,7 +25,7 @@ public struct PromptTemplates {
         """
     }
     
-    public func toolUsageGuide(tools: [any Tool]) -> String {
+    static func toolUsageGuide(tools: [any Tool]) -> String {
         """
         [AVAILABLE TOOLS]:
         \(formatToolDescriptions(tools))
@@ -41,7 +39,7 @@ public struct PromptTemplates {
         """
     }
     
-    public func processGuidelines() -> String {
+    static func processGuidelines() -> String {
         """
         [EXECUTION PROCESS]:
         1. Analyze each task thoroughly using <thinking></thinking> tags
@@ -53,7 +51,7 @@ public struct PromptTemplates {
         """
     }
     
-    public func toolExamples() -> String {
+    static func toolExamples() -> String {
         """
         # Tool Use Instructions
         
@@ -74,7 +72,7 @@ public struct PromptTemplates {
         """
     }
     
-    public func formatToolDescriptions(_ tools: [any Tool]) -> String {
+    static func formatToolDescriptions(_ tools: [any Tool]) -> String {
         tools.compactMap({ $0.guide }).joined(separator: "\n\n")
     }
 }
