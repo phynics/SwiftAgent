@@ -11,8 +11,8 @@ let package = Package(
             name: "SwiftAgent",
             targets: ["SwiftAgent"]),
         .library(
-            name: "AgentModels",
-            targets: ["AgentTools"]),
+            name: "Agents",
+            targets: ["Agents"]),
         .library(
             name: "AgentTools",
             targets: ["AgentTools"]),
@@ -32,7 +32,7 @@ let package = Package(
             ]
         ),
         .target(
-            name: "AgentModels",
+            name: "Agents",
             dependencies: ["SwiftAgent"]
         ),
         .target(
@@ -44,7 +44,7 @@ let package = Package(
             dependencies: [
                 "SwiftAgent",
                 "AgentTools",
-                "AgentModels",
+                "Agents",
                 "SwiftAnthropic",
                 "OpenAI",
                 "OllamaKit",

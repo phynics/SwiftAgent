@@ -7,7 +7,7 @@
 
 import Foundation
 import SwiftAgent
-import AgentModels
+import Agents
 
 public struct MainAgent: Agent {
 
