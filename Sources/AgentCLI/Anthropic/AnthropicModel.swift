@@ -20,6 +20,8 @@ public struct AnthropicModel: SwiftAgent.Model {
     // Anthropicサービス
     private let service: AnthropicService
     
+    public var model: SwiftAnthropic.Model
+    
     // ツール配列
     public var tools: [any Tool]
     
@@ -30,15 +32,17 @@ public struct AnthropicModel: SwiftAgent.Model {
     /// - Parameters:
     ///   - apiKey: Anthropic API Key
     ///   - systemPrompt: システムプロンプトを生成する関数
-    public init(_ systemPrompt: ([any Tool]) -> String) {
+    public init(
+        model: SwiftAnthropic.Model = .claude35Haiku,
+        tools: [any Tool],
+        systemPrompt: ([any Tool]) -> String
+    ) {
         guard let apiKey: String = ProcessInfo.processInfo.environment["ANTHROPIC_API_KEY"] else {
             fatalError("Anthropic API Key is not set in environment variables.")
         }
+        self.model = model
+        self.tools = tools
         self.service = AnthropicServiceFactory.service(apiKey: apiKey, betaHeaders: nil)
-        self.tools = [
-            FileSystemTool(workingDirectory: FileManager.default.currentDirectoryPath),
-            ExecuteCommandTool()
-        ]
         self.systemPrompt = systemPrompt(tools)
     }
     
@@ -57,7 +61,7 @@ public struct AnthropicModel: SwiftAgent.Model {
         
         // パラメータの構築
         let parameters = MessageParameter(
-            model: .claude35Haiku,
+            model: model,
             messages: messages,
             maxTokens: 4096,
             system: .text(systemPrompt),

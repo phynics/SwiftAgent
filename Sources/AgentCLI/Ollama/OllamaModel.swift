@@ -16,16 +16,19 @@ public struct OllamaModel: Model {
     public typealias Input = [OKChatRequestData.Message]
     public typealias Output = String
     
-    public var tools: [any Tool] = [
-        FileSystemTool(workingDirectory: FileManager.default.currentDirectoryPath),
-        ExecuteCommandTool()
-    ]
+    public var model: String
+    
+    public var tools: [any Tool]
     
     public var systemPrompt: String
         
     public init(
-        _ systemPrompt: ([any Tool]) -> String
+        model: String,
+        tools: [any Tool],
+        systemPrompt: ([any Tool]) -> String
     ) {
+        self.model = model
+        self.tools = tools
         self.systemPrompt = systemPrompt(tools)
     }
     
@@ -44,7 +47,7 @@ public struct OllamaModel: Model {
         let ollama = OllamaKit()
         let stream: AsyncThrowingStream<OKChatResponse, Error> = ollama.chat(
             data: .init(
-                model: "llama3.2:latest",
+                model: model,
                 messages: messages,
                 tools: okTools
             )

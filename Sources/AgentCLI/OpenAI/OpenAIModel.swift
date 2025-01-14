@@ -13,18 +13,24 @@ import AgentTools
 /// OpenAI based implementation of Model
 public struct OpenAIModel: SwiftAgent.Model {
     
-    public var tools: [any Tool] = [
-        FileSystemTool(workingDirectory: FileManager.default.currentDirectoryPath),
-        ExecuteCommandTool()
-    ]
+    public var model: String
+    
+    public var tools: [any Tool]
     
     public var systemPrompt: String
+    
     private let openAI: OpenAI
     
-    public init(_ systemPrompt: ([any Tool]) -> String) {
+    public init(
+        model: String = Model.gpt4_o_mini,
+        tools: [any Tool],
+        systemPrompt: ([any Tool]) -> String
+    ) {
         guard let apiKey: String = ProcessInfo.processInfo.environment["OPENAI_API_KEY"] else {
             fatalError("OpenAI API Key is not set in environment variables.")
         }
+        self.model = model
+        self.tools = tools
         self.systemPrompt = systemPrompt(tools)
         self.openAI = OpenAI(apiToken: apiKey)
     }
@@ -47,7 +53,7 @@ public struct OpenAIModel: SwiftAgent.Model {
         
         let query = ChatQuery(
             messages: messages,
-            model: .gpt4_o_mini,
+            model: model,
             tools: openAITools
         )
         

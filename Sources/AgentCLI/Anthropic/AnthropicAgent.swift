@@ -9,6 +9,7 @@
 import Foundation
 import SwiftAgent
 import SwiftAnthropic
+import AgentTools
 
 /// Enhanced agent implementation using Ollama model
 public struct AnthropicAgent: Agent {
@@ -23,7 +24,10 @@ public struct AnthropicAgent: Agent {
     
     public var body: some Step<Input, Output> {
         AnthropicMessageTransform(messages: $messages)
-        AnthropicModel { tools in
+        AnthropicModel(tools: [
+            FileSystemTool(workingDirectory: FileManager.default.currentDirectoryPath),
+            ExecuteCommandTool()
+        ]) { tools in
             PromptTemplates()
                 .systemPrompt(
                     tools: tools,

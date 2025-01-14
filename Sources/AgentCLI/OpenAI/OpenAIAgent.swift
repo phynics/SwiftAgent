@@ -9,6 +9,7 @@
 import Foundation
 import SwiftAgent
 import OpenAI
+import AgentTools
 
 /// Enhanced agent implementation using Ollama model
 public struct OpenAIAgent: Agent {
@@ -23,7 +24,10 @@ public struct OpenAIAgent: Agent {
     
     public var body: some Step<Input, Output> {
         OpenAIMessageTransform(messages: $messages)
-        OpenAIModel { tools in
+        OpenAIModel(tools: [
+            FileSystemTool(workingDirectory: FileManager.default.currentDirectoryPath),
+            ExecuteCommandTool()
+        ]) { tools in
             PromptTemplates()
                 .systemPrompt(
                     tools: tools,

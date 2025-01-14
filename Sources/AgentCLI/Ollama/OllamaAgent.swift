@@ -8,6 +8,7 @@
 import Foundation
 import SwiftAgent
 import OllamaKit
+import AgentTools
 
 /// Enhanced agent implementation using Ollama model
 public struct OllamaAgent: Agent {
@@ -22,7 +23,10 @@ public struct OllamaAgent: Agent {
     
     public var body: some Step<Input, Output> {
         OllamaMessageTransform(messages: $messages)
-        OllamaModel { tools in
+        OllamaModel(model: "llama3.2:latest", tools: [
+            FileSystemTool(workingDirectory: FileManager.default.currentDirectoryPath),
+            ExecuteCommandTool()
+        ]) { tools in
             PromptTemplates()
                 .systemPrompt(
                     tools: tools,
