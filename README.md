@@ -61,18 +61,83 @@ dependencies: [
 
 ## Core Components
 
-### Steps
+### Steps and Sequential Execution
 
-Steps are the fundamental building blocks in SwiftAgent. Each step processes an input and produces an output:
+Steps are the fundamental building blocks in SwiftAgent. While steps are declared in a declarative SwiftUI-like syntax, they are executed sequentially, with each step's output becoming the input for the next step.
 
 ```swift
 public protocol Step<Input, Output> {
-    associatedtype Input: Codable & Sendable
-    associatedtype Output: Codable & Sendable
+    associatedtype Input: Sendable
+    associatedtype Output: Sendable
     
     func run(_ input: Input) async throws -> Output
 }
 ```
+
+Steps are composed using the `@StepBuilder` result builder, which automatically chains them together based on their input and output types. For example:
+
+```swift
+struct TextProcessingAgent: Agent {
+    var body: some Step<String, String> {
+        // These steps are executed sequentially:
+        TokenizeStep()        // String -> [String]
+        FilterStep()          // [String] -> [String]
+        JoinStep()           // [String] -> String
+    }
+}
+```
+
+In this example, while the steps are written declaratively, they execute in order:
+1. First, `TokenizeStep` runs and splits the input string into tokens
+2. Then, `FilterStep` processes the tokens array
+3. Finally, `JoinStep` combines the filtered tokens back into a string
+
+The framework enforces this sequential flow through type checking at compile time. Each step must accept the output type of the previous step as its input type.
+
+The `StepBuilder` supports up to 8 sequential steps and includes support for conditional execution:
+
+```swift
+struct ConditionalAgent: Agent {
+    @Memory var shouldFilter: Bool = true
+    
+    var body: some Step<String, String> {
+        TokenizeStep()
+        
+        if shouldFilter {
+            FilterStep()
+        }
+        
+        JoinStep()
+    }
+}
+```
+
+You can also create loops using the `Loop` type:
+
+```swift
+struct IterativeAgent: Agent {
+    var body: some Step<Data, ProcessedData> {
+        Loop(max: 5) { input in
+            ProcessingStep()
+        } until: { output in
+            output.isFullyProcessed
+        }
+    }
+}
+```
+
+Behind the scenes, the `StepBuilder` creates a chain of steps using types like `Chain2`, `Chain3`, etc., which handle the sequential execution:
+
+```swift
+public struct Chain2<S1: Step, S2: Step>: Step where S1.Output == S2.Input {
+    public func run(_ input: Input) async throws -> Output {
+        let intermediate = try await step1.run(input)
+        return try await step2.run(intermediate)
+    }
+}
+```
+
+This combination of declarative syntax and sequential execution provides a clear, type-safe way to compose complex agent workflows while maintaining the familiar Swift syntax.
 
 ### Tools
 
