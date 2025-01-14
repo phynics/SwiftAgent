@@ -12,7 +12,7 @@ import Foundation
 ///
 /// `Step` takes an input of a specific type and produces an output of another type asynchronously.
 ///
-/// - Note: The input and output types must conform to both `Codable` and `Sendable` to ensure
+/// - Note: The input and output types must conform to both  `Sendable` to ensure
 ///   compatibility with serialization and concurrency.
 public protocol Step<Input, Output> {
     
@@ -565,3 +565,59 @@ public struct Loop<S: Step>: Step where S.Input == S.Output {
 public enum LoopError: Error {
     case conditionNotMet
 }
+
+public struct Map<Input: Collection & Sendable, Output: Collection & Sendable>: Step where Input.Element: Sendable, Output.Element: Sendable {
+    
+    private let transform: (Input.Element, Int) -> any Step<Input.Element, Output.Element>
+    
+    public init(
+        @StepBuilder transform: @escaping (
+            Input.Element,
+            Int
+        ) -> any Step<Input.Element, Output.Element>
+    ) {
+        self.transform = transform
+    }
+    
+    public func run(_ input: Input) async throws -> [Output.Element] {
+        var results: [Output.Element] = []
+        var index = 0
+        
+        for element in input {
+            let step = transform(element, index)
+            let partialOutput = try await step.run(element)
+            results.append(partialOutput)
+            index += 1
+        }
+        
+        return results
+    }
+}
+
+public struct Reduce<Input: Collection & Sendable, Output: Sendable>: Step where Input.Element: Sendable {
+    
+    private let process: (Output, Input.Element, Int) -> any Step<Output, Output>
+    private let initial: Output
+    
+    public init(
+        initial: Output,
+        @StepBuilder process: @escaping (Output, Input.Element, Int) -> any Step<Output, Output>
+    ) {
+        self.initial = initial
+        self.process = process
+    }
+    
+    public func run(_ input: Input) async throws -> Output {
+        var result = initial
+        var index = 0
+        
+        for element in input {
+            let step = process(result, element, index)
+            result = try await step.run(result)
+            index += 1
+        }
+        
+        return result
+    }
+}
+
