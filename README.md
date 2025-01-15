@@ -1,69 +1,24 @@
 # SwiftAgent
 
-SwiftAgent is a powerful Swift framework that enables declarative development of AI agents in a SwiftUI-like syntax. It provides a clean, elegant way to compose complex agent workflows while maintaining the type safety and expressiveness of Swift.
+SwiftAgent is a powerful Swift framework for building AI agents using a declarative SwiftUI-like syntax. It provides a type-safe, composable way to create complex agent workflows while maintaining Swift's expressiveness.
 
 ## Features
 
 - 🎯 **Declarative Syntax**: Build agents using familiar SwiftUI-like syntax
 - 🔄 **Composable Steps**: Chain multiple steps together seamlessly
 - 🛠️ **Type-Safe Tools**: Define and use tools with compile-time type checking
-- 🤖 **LLM Integration**: Easy integration with language models
+- 🤖 **LLM Integration**: Built-in support for OpenAI, Anthropic, and Ollama
 - 📦 **Modular Design**: Create reusable agent components
 - 🔄 **Async/Await Support**: Built for modern Swift concurrency
 - 🎭 **Protocol-Based**: Flexible and extensible architecture
-- 📊 **State Management**: Powerful state management with Memory and Relay
-- 🔍 **Monitoring**: Built-in monitoring capabilities for debugging and logging
-
-## Requirements
-
-- Swift 6.0+
-- iOS 18.0+ / macOS 15.0+
-- Ollama installed (for Ollama integration)
-- Anthropic API key (for Claude integration)
-- OpenAI API key (for OpenAI integration)
-
-## Development Setup
-
-### 1. Install Ollama
-
-Install Ollama following the official instructions at [Ollama Installation Guide](https://ollama.ai/download).
-
-### 2. Configure API Keys
-
-Add the following environment variables to your Xcode scheme:
-
-1. Open your Xcode project
-2. Go to Edit Scheme (⌘ + <)
-3. Select "Run" from the left sidebar
-4. Go to the "Arguments" tab
-5. Under "Environment Variables", add:
-   - `ANTHROPIC_API_KEY`: Your Anthropic API key
-   - `OPENAI_API_KEY`: Your OpenAI API key
-
-You can also add these to your environment:
-
-```bash
-export ANTHROPIC_API_KEY=your_api_key_here
-export OPENAI_API_KEY=your_api_key_here
-```
-
-## Installation
-
-### Swift Package Manager
-
-Add SwiftAgent to your Swift package dependencies:
-
-```swift
-dependencies: [
-    .package(url: "https://github.com/1amageek/SwiftAgent.git", branch: "main")
-]
-```
+- 📊 **State Management**: Memory and Relay for state handling
+- 🔍 **Monitoring**: Built-in monitoring and debugging capabilities
 
 ## Core Components
 
-### Steps and Sequential Execution
+### Steps
 
-Steps are the fundamental building blocks in SwiftAgent. While steps are declared in a declarative SwiftUI-like syntax, they are executed sequentially, with each step's output becoming the input for the next step.
+Steps are the fundamental building blocks in SwiftAgent. They process input and produce output in a type-safe manner:
 
 ```swift
 public protocol Step<Input, Output> {
@@ -74,290 +29,273 @@ public protocol Step<Input, Output> {
 }
 ```
 
-Steps are composed using the `@StepBuilder` result builder, which automatically chains them together based on their input and output types. For example:
+### Transform
+
+The `Transform` step provides a simple way to convert data:
 
 ```swift
-struct TextProcessingAgent: Agent {
-    var body: some Step<String, String> {
-        // These steps are executed sequentially:
-        TokenizeStep()        // String -> [String]
-        FilterStep()          // [String] -> [String]
-        JoinStep()           // [String] -> String
+Transform<String, [ChatMessage]> { input -> [ChatMessage] in
+    [ChatMessage(role: .user, content: [.text(input)])]
+}
+```
+
+### Loop
+
+The `Loop` step enables iterative processing with a condition:
+
+```swift
+Loop(max: 5) { input in
+    ProcessingStep()
+} until: { output in
+    output.meetsQualityCriteria
+}
+```
+
+### Map
+
+The `Map` step processes collections by applying a transformation to each element:
+
+```swift
+Map<[Chapter], [String]> { chapter, index in
+    Transform { chapter in
+        // Process each chapter
     }
 }
 ```
 
-In this example, while the steps are written declaratively, they execute in order:
-1. First, `TokenizeStep` runs and splits the input string into tokens
-2. Then, `FilterStep` processes the tokens array
-3. Finally, `JoinStep` combines the filtered tokens back into a string
+### Join
 
-The framework enforces this sequential flow through type checking at compile time. Each step must accept the output type of the previous step as its input type.
-
-The `StepBuilder` supports up to 8 sequential steps and includes support for conditional execution:
+The `Join` step concatenates an array of strings:
 
 ```swift
-struct ConditionalAgent: Agent {
-    @Memory var shouldFilter: Bool = true
-    
-    var body: some Step<String, String> {
-        TokenizeStep()
-        
-        if shouldFilter {
-            FilterStep()
-        }
-        
-        JoinStep()
-    }
-}
+Join(separator: "\n")  // Combines strings with newlines
 ```
 
-You can also create loops using the `Loop` type:
+## Example: AI Novelist
+
+Here's a complete example showing how to create an AI novelist agent that generates and refines stories:
 
 ```swift
-struct IterativeAgent: Agent {
-    var body: some Step<Data, ProcessedData> {
-        Loop(max: 5) { input in
-            ProcessingStep()
-        } until: { output in
-            output.isFullyProcessed
-        }
-    }
-}
-```
-
-Behind the scenes, the `StepBuilder` creates a chain of steps using types like `Chain2`, `Chain3`, etc., which handle the sequential execution:
-
-```swift
-public struct Chain2<S1: Step, S2: Step>: Step where S1.Output == S2.Input {
-    public func run(_ input: Input) async throws -> Output {
-        let intermediate = try await step1.run(input)
-        return try await step2.run(intermediate)
-    }
-}
-```
-
-This combination of declarative syntax and sequential execution provides a clear, type-safe way to compose complex agent workflows while maintaining the familiar Swift syntax.
-
-### Tools
-
-Tools are special types of Steps that represent capabilities that can be used by agents. They provide a standardized interface for external operations and include comprehensive documentation:
-
-```swift
-public protocol Tool: Identifiable, Step where Input: Codable, Output: Codable & CustomStringConvertible {
-    /// A unique name identifying the tool
-    var name: String { get }
+public struct Novelist: Agent {
+    public typealias Input = String
+    public typealias Output = String
     
-    /// A description of what the tool does
-    var description: String { get }
-    
-    /// JSON schema defining the tool's input/output structure
-    var parameters: JSONSchema { get }
-    
-    /// Detailed guide for using the tool
-    var guide: String? { get }
-}
-```
-
-Tools must include:
-- Unique identifying name
-- Description of functionality
-- JSON schema for input/output validation
-- Optional detailed usage guide with examples
-- Implementation of the `run` method from the `Step` protocol
-
-Example of implementing a tool:
-
-```swift
-struct SearchTool: Tool {
-    var name: String { "search" }
-    var description: String { "Searches the web for information" }
-    
-    var parameters: JSONSchema {
-        .object(
-            title: "SearchParameters",
-            properties: [
-                "query": .string(description: "The search query"),
-                "limit": .integer(description: "Maximum number of results", default: 10)
-            ],
-            required: ["query"]
-        )
-    }
-    
-    var guide: String? {
-        """
-        # Search Tool
-        
-        Performs web searches and returns relevant results.
-        
-        ## Parameters
-        - query: Search terms (required)
-        - limit: Max results (optional, default: 10)
-        
-        ## Usage
-        - Provide specific search terms
-        - Results are ranked by relevance
-        
-        ## Examples
-        ```json
-        {
-            "query": "Swift programming",
-            "limit": 5
-        }
-        ```
-        """
-    }
-    
-    func run(_ input: Input) async throws -> Output {
-        // Implementation
-    }
-}
-```
-
-### State Management
-
-SwiftAgent provides two powerful state management mechanisms: Memory and Relay.
-
-#### Memory
-
-Memory is a property wrapper that stores state and provides a Relay projection:
-
-```swift
-struct ChatAgent: Agent {
-    @Memory private var messages: [Message] = []  // State storage
-    @Memory private var context: Context = .init() // Another state
-    
-    var body: some Step<String, String> {
-        MessageTransform(messages: $messages)  // Pass as a binding
-        ProcessStep(context: $context)         // Access state via binding
-    }
-}
-```
-
-#### Relay
-
-Relay provides a dynamic way to access and modify state:
-
-```swift
-struct ProcessStep: Step {
-    @Relay var messages: [Message]    // Receives state from parent
-    @Relay var context: Context       // Another state reference
-    
-    func run(_ input: String) async throws -> String {
-        messages.append(Message(content: input))  // Modify state
-        context.updateWithMessage(input)          // Update context
-        return "Processed: \(input)"
-    }
-}
-```
-
-### Monitoring
-
-SwiftAgent includes built-in monitoring capabilities through the Monitor step wrapper:
-
-```swift
-struct LoggingAgent: Agent {
-    var body: some Step<String, String> {
-        ProcessStep()
-            .monitor(
-                input: { input in
-                    print("Received input: \(input)")
-                },
-                output: { output in
-                    print("Produced output: \(output)")
+    public var body: some Step<Input, Output> {
+        Loop(max: 2) { request in
+            // Convert request to chat message
+            Transform { input -> [ChatMessage] in
+                [ChatMessage(role: .user, content: [.text(input)])]
+            }
+            
+            // Generate chapter structure
+            OpenAIModel<Novel>(schema: ChaptersJSONSchema) { _ in
+                """
+                You are a novelist. Please output a detailed 
+                chapter structure in JSON based on the following requirements:
+                
+                - Include compelling characters, effective foreshadowing, 
+                  and impactful dialogue
+                - Describe character growth and development
+                - Maintain consistent themes throughout the story
+                """
+            }
+            
+            // Extract chapters
+            Transform<Novel, [Chapter]> { novel in
+                novel.chapters
+            }
+            
+            // Convert each chapter to narrative
+            Map<[Chapter], [String]> { chapter, index in
+                Transform<Chapter, [ChatMessage]> { chapter in
+                    [ChatMessage(role: .user, content: [.text(
+                        createPrompt(for: chapter)
+                    )])]
                 }
-            )
-    }
-}
-```
-
-You can also monitor just inputs or outputs:
-
-```swift
-ProcessStep()
-    .onInput { input in 
-        print("Input received: \(input)")
-    }
-
-ProcessStep()
-    .onOutput { output in
-        print("Output produced: \(output)")
-    }
-```
-
-## Usage Examples
-
-### Creating a Chat Agent
-
-```swift
-struct ChatAgent: Agent {
-    @Memory private var messages: [Message] = []
-    
-    var body: some Step<String, String> {
-        // Transform input into messages
-        MessageTransform(messages: $messages)
-        
-        // Process with LLM
-        OllamaModel(model: "llama2", tools: [
-            SearchTool(),
-            CalculatorTool()
-        ]) { tools in
-            "You are a helpful assistant"
-        }
-        .monitor(
-            input: { print("Model input: \($0)") },
-            output: { print("Model output: \($0)") }
-        )
-        
-        // Store assistant response
-        MessageStore(messages: $messages)
-    }
-}
-```
-
-### Conditional Steps
-
-```swift
-struct SmartAgent: Agent {
-    @Memory private var context: Context = .init()
-    
-    var body: some Step<Query, Response> {
-        if context.requiresSearch {
-            SearchStep()
-        } else {
-            DirectResponseStep()
+                OpenAIModel { _ in
+                    "Write the chapter following the plot outline"
+                }
+            }
+            
+            // Combine chapters
+            Join()
+        } until: {
+            // Evaluate novel quality
+            Transform<String, [ChatMessage]> { novel in
+                [ChatMessage(role: .user, content: [.text(
+                    "Please evaluate this novel: \(novel)"
+                )])]
+            }
+            
+            OpenAIModel<NovelQualityAssessment>(
+                schema: NovelQualityAssessmentSchema
+            ) { _ in
+                """
+                Evaluate the novel's quality based on:
+                - Character development
+                - Plot progression
+                - Thematic consistency
+                - Overall quality
+                """
+            }
+            
+            Transform<NovelQualityAssessment, Bool> { assessment in
+                assessment.hasGoodCharacters &&
+                assessment.hasGoodPlot &&
+                assessment.hasGoodTheme &&
+                assessment.isHighQuality
+            }
         }
     }
 }
 ```
 
-### Loops
+The Novelist agent demonstrates several key features:
+- Iterative refinement using `Loop`
+- JSON schema validation for structured data
+- Collection processing with `Map`
+- String concatenation with `Join`
+- Quality assessment with custom evaluation criteria
+
+### Supporting Types
+
+The agent uses several supporting types for structure:
 
 ```swift
-struct IterativeAgent: Agent {
-    @Memory private var state: ProcessingState = .init()
-    
-    var body: some Step<Data, Result> {
-        Loop(max: 5) { input in
-            ProcessingStep(state: $state)
-        } until: { result in
-            result.isComplete
-        }
+struct Novel: Codable {
+    var chapters: [Chapter]
+}
+
+struct Chapter: Codable {
+    struct Setting: Codable {
+        let location: String
+        let timePeriod: String
     }
+    
+    struct Character: Codable {
+        let name: String
+        let role: String
+    }
+    
+    struct PlotPoint: Codable {
+        let scene: Int
+        let description: String
+    }
+    
+    let number: Int
+    let title: String
+    let summary: String
+    let setting: Setting
+    let characters: [Character]
+    let plotPoints: [PlotPoint]
+    let theme: String
 }
 ```
 
-## Packages
+Quality assessment is handled by:
 
-SwiftAgent consists of several packages:
+```swift
+struct NovelQualityAssessment: Codable {
+    let hasGoodCharacters: Bool
+    let hasGoodPlot: Bool
+    let hasGoodTheme: Bool
+    let isHighQuality: Bool
+}
+```
 
-- **SwiftAgent**: Core framework with base protocols and components
-- **AgentTools**: Collection of ready-to-use tools
-- **AgentCLI**: Command-line interface for agent execution
+## Requirements
 
-## Contributing
+- Swift 6.0+
+- iOS 18.0+ / macOS 15.0+
+- OpenAI API key (for OpenAI integration)
+- Anthropic API key (for Claude integration)
+- Ollama installation (for local model support)
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+## Installation and Development Setup
+
+### Swift Package Manager
+
+```swift
+dependencies: [
+    .package(url: "https://github.com/1amageek/SwiftAgent.git", branch: "main")
+]
+```
+
+### Configure API Keys
+
+API keys must be properly configured for language model integration. You have several options:
+
+#### Option 1: Xcode Environment Variables
+
+1. Open your Xcode project
+2. Go to Edit Scheme (⌘ + <)
+3. Select "Run" from the left sidebar
+4. Go to the "Arguments" tab
+5. Under "Environment Variables", add:
+   - `OPENAI_API_KEY`: Your OpenAI API key
+   - `ANTHROPIC_API_KEY`: Your Anthropic API key
+   - `OLLAMA_HOST`: Your Ollama host (optional, defaults to "http://localhost:11434")
+
+#### Option 2: Environment File
+
+Create a `.env` file in your project root:
+
+```bash
+OPENAI_API_KEY=your_openai_api_key_here
+ANTHROPIC_API_KEY=your_anthropic_api_key_here
+OLLAMA_HOST=http://localhost:11434
+```
+
+#### Option 3: Shell Environment
+
+Add to your shell profile (`~/.zshrc`, `~/.bashrc`, etc.):
+
+```bash
+export OPENAI_API_KEY=your_openai_api_key_here
+export ANTHROPIC_API_KEY=your_anthropic_api_key_here
+export OLLAMA_HOST=http://localhost:11434
+```
+
+### Local Development Setup
+
+1. **Install Xcode 15.0+**
+   - Required for Swift 6.0 support
+   - Available from the Mac App Store or developer.apple.com
+
+2. **Install Ollama (Optional, for local model support)**
+   ```bash
+   curl https://ollama.ai/install.sh | sh
+   ```
+
+3. **Clone the Repository**
+   ```bash
+   git clone https://github.com/1amageek/SwiftAgent.git
+   cd SwiftAgent
+   ```
+
+4. **Install Dependencies**
+   ```bash
+   swift package resolve
+   ```
+
+5. **Open in Xcode**
+   ```bash
+   xed .
+   ```
+
+### Testing
+
+Run the test suite:
+
+```bash
+swift test
+```
+
+Or run specific test targets:
+
+```bash
+swift test --filter SwiftAgentTests.SpecificTestSuite
+```
 
 ## License
 
@@ -366,7 +304,3 @@ SwiftAgent is available under the MIT license.
 ## Author
 
 @1amageek
-
-## Acknowledgments
-
-SwiftAgent is inspired by SwiftUI's declarative syntax and the concepts outlined in various agent architectures. Special thanks to the Swift and AI communities for their ongoing contributions to these fields.

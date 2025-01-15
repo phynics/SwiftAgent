@@ -13,6 +13,6 @@ import LLMChatOpenAI
 public struct MainAgent: Agent {
 
     public var body: some Step<String, String> {
-        OpenAIAgent()
+        OllamaAgent()
     }
 }

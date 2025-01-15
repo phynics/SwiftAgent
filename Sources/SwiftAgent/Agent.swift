@@ -531,49 +531,82 @@ public enum ConditionalStepError: Error {
     case noStepAvailable
 }
 
-/// A step that repeatedly executes another step until a condition is met or maximum iterations are reached.
+/// A step that repeatedly executes another step until a condition step evaluates to true.
 ///
-/// Use `Loop` when you need to repeatedly process data until a specific condition is satisfied.
-/// The loop will continue until either:
-/// - The condition closure returns `true`
-/// - The maximum number of iterations is reached
+/// `Loop` is particularly useful when you need to implement retry logic, polling mechanisms,
+/// or iterative refinement of results. The loop continues until either the condition step
+/// returns `true` or the maximum number of iterations is reached.
 ///
-/// Example:
+/// The key features of `Loop` include:
+/// - Configurable maximum iterations to prevent infinite loops
+/// - Separate step builders for the main process and condition evaluation
+/// - Type-safe input/output handling
+/// - Support for async/await operations
+///
+/// Example usage with API retry logic:
 /// ```swift
-/// struct RetryAgent: Agent {
+/// struct APIRetryAgent: Agent {
+///     var body: some Step<APIRequest, APIResponse> {
+///         Loop(max: 3) { request in
+///             // Make API call and handle potential failures
+///             Transform { req in
+///                 try await apiClient.send(req)
+///             }
+///         } until: {
+///             // Check if the response is valid
+///             Transform { response in
+///                 response.statusCode == 200
+///             }
+///         }
+///     }
+/// }
+/// ```
+///
+/// Example usage with iterative content refinement:
+/// ```swift
+/// struct ContentRefiner: Agent {
 ///     var body: some Step<String, String> {
-///         Loop(max: 3) { input in
-///             // Attempt to process with AI model
-///             AIProcessor()
-///         } until: { output in
-///             // Continue until we get a valid response
-///             output.contains("valid_response")
+///         Loop(max: 5) { content in
+///             // Apply AI refinement to the content
+///             Transform { text in
+///                 try await aiModel.refine(text)
+///             }
+///         } until: {
+///             // Check if the content meets quality criteria
+///             Transform { refinedContent in
+///                 try await qualityChecker.evaluate(refinedContent) >= 0.95
+///             }
+///         }
+///     }
+/// }
+/// ```
+///
+/// Example usage with polling mechanism:
+/// ```swift
+/// struct JobPoller: Agent {
+///     var body: some Step<JobID, JobResult> {
+///         Loop(max: 10) { jobId in
+///             // Check job status
+///             Transform { id in
+///                 try await jobService.checkStatus(id)
+///             }
+///         } until: {
+///             // Continue until job is complete
+///             Transform { status in
+///                 status.state == .completed || status.state == .failed
+///             }
 ///         }
 ///     }
 /// }
 /// ```
 public struct Loop<S: Step>: Step where S.Input == S.Output {
-    /// The type of value that this step takes as input
     public typealias Input = S.Input
-    
-    /// The type of value that this step produces as output
     public typealias Output = S.Output
     
-    /// The maximum number of iterations to perform
     private let maxIterations: Int
-    
-    /// A closure that produces the step to be executed in each iteration
     private let step: (Input) -> S
+    private let condition: () -> some Step<S.Output, Bool>
     
-    /// A closure that determines when to stop iterating
-    private let condition: () async throws -> any Step<S.Output, Bool>
-    
-    /// Creates a new loop step with the specified parameters
-    ///
-    /// - Parameters:
-    ///   - max: The maximum number of iterations to perform
-    ///   - step: A closure that produces the step to execute in each iteration
-    ///   - condition: A closure that returns `true` when the loop should stop
     public init(
         max: Int,
         @StepBuilder step: @escaping (Input) -> S,
@@ -584,11 +617,6 @@ public struct Loop<S: Step>: Step where S.Input == S.Output {
         self.condition = condition
     }
     
-    /// Executes the loop step with the given input
-    ///
-    /// - Parameter input: The input value to process
-    /// - Returns: The final output value after the loop completes
-    /// - Throws: `LoopError.conditionNotMet` if the maximum iterations are reached before the condition is met
     public func run(_ input: Input) async throws -> Output {
         var current = input
         for _ in 0..<maxIterations {
