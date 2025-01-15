@@ -605,12 +605,12 @@ public struct Loop<S: Step>: Step where S.Input == S.Output {
     
     private let maxIterations: Int
     private let step: (Input) -> S
-    private let condition: () -> some Step<S.Output, Bool>
+    private let condition: () -> any Step<S.Output, Bool>
     
     public init(
         max: Int,
         @StepBuilder step: @escaping (Input) -> S,
-        @StepBuilder until condition: @escaping () -> some Step<S.Output, Bool>
+        @StepBuilder until condition: @escaping () -> any Step<S.Output, Bool>
     ) {
         self.maxIterations = max
         self.step = step
