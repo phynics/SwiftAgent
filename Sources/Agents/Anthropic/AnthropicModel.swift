@@ -57,7 +57,7 @@ public struct AnthropicModel: SwiftAgent.Model {
     /// - Throws: Fatal error if ANTHROPIC_API_KEY environment variable is not set.
     public init(
         model: SwiftAnthropic.Model = .claude35Haiku,
-        tools: [any Tool],
+        tools: [any Tool] = [],
         systemPrompt: ([any Tool]) -> String
     ) {
         guard let apiKey: String = ProcessInfo.processInfo.environment["ANTHROPIC_API_KEY"] else {

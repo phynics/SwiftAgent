@@ -23,7 +23,7 @@ public struct OllamaAgent: Agent {
     
     public var body: some Step<Input, Output> {
         OllamaMessageTransform(messages: $messages)
-        OllamaModel(model: "llama3.2:latest", tools: [
+        OllamaModel(tools: [
             FileSystemTool(workingDirectory: FileManager.default.currentDirectoryPath),
             ExecuteCommandTool()
         ]) { tools in

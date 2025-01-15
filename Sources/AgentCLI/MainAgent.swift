@@ -8,14 +8,11 @@
 import Foundation
 import SwiftAgent
 import Agents
+import LLMChatOpenAI
 
 public struct MainAgent: Agent {
 
     public var body: some Step<String, String> {
-        Loop(max: 2) { input in
-            OllamaAgent()
-        } until: { output in
-            return !output.contains("error")
-        }
+        OpenAIAgent()
     }
 }

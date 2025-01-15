@@ -52,8 +52,8 @@ public struct OllamaModel: Model {
     ///   - tools: An array of tools that the model can use during execution
     ///   - systemPrompt: A closure that generates the system prompt based on available tools
     public init(
-        model: String,
-        tools: [any Tool],
+        model: String = "llama3.2:latest",
+        tools: [any Tool] = [],
         systemPrompt: ([any Tool]) -> String
     ) {
         self.model = model

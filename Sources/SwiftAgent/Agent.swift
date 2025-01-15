@@ -531,29 +531,69 @@ public enum ConditionalStepError: Error {
     case noStepAvailable
 }
 
+/// A step that repeatedly executes another step until a condition is met or maximum iterations are reached.
+///
+/// Use `Loop` when you need to repeatedly process data until a specific condition is satisfied.
+/// The loop will continue until either:
+/// - The condition closure returns `true`
+/// - The maximum number of iterations is reached
+///
+/// Example:
+/// ```swift
+/// struct RetryAgent: Agent {
+///     var body: some Step<String, String> {
+///         Loop(max: 3) { input in
+///             // Attempt to process with AI model
+///             AIProcessor()
+///         } until: { output in
+///             // Continue until we get a valid response
+///             output.contains("valid_response")
+///         }
+///     }
+/// }
+/// ```
 public struct Loop<S: Step>: Step where S.Input == S.Output {
+    /// The type of value that this step takes as input
     public typealias Input = S.Input
+    
+    /// The type of value that this step produces as output
     public typealias Output = S.Output
     
+    /// The maximum number of iterations to perform
     private let maxIterations: Int
-    private let step: (Input) -> S
-    private let condition: (Output) async throws -> Bool
     
+    /// A closure that produces the step to be executed in each iteration
+    private let step: (Input) -> S
+    
+    /// A closure that determines when to stop iterating
+    private let condition: () async throws -> any Step<S.Output, Bool>
+    
+    /// Creates a new loop step with the specified parameters
+    ///
+    /// - Parameters:
+    ///   - max: The maximum number of iterations to perform
+    ///   - step: A closure that produces the step to execute in each iteration
+    ///   - condition: A closure that returns `true` when the loop should stop
     public init(
         max: Int,
-        @StepBuilder step:  @escaping (Input) -> S,
-        until condition: @escaping (Output) async throws -> Bool
+        @StepBuilder step: @escaping (Input) -> S,
+        @StepBuilder until condition: @escaping () -> some Step<S.Output, Bool>
     ) {
         self.maxIterations = max
         self.step = step
         self.condition = condition
     }
     
+    /// Executes the loop step with the given input
+    ///
+    /// - Parameter input: The input value to process
+    /// - Returns: The final output value after the loop completes
+    /// - Throws: `LoopError.conditionNotMet` if the maximum iterations are reached before the condition is met
     public func run(_ input: Input) async throws -> Output {
         var current = input
         for _ in 0..<maxIterations {
             let output = try await step(input).run(current)
-            if try await condition(output) {
+            if try await condition().run(output) {
                 return output
             }
             current = output
@@ -562,14 +602,41 @@ public struct Loop<S: Step>: Step where S.Input == S.Output {
     }
 }
 
+/// Errors that can occur during loop execution
 public enum LoopError: Error {
+    /// Indicates that the maximum number of iterations was reached without satisfying the condition
     case conditionNotMet
 }
 
+/// A step that transforms each element in a collection using a specified step
+///
+/// Use `Map` when you need to process each element in a collection independently.
+/// The transformation is applied to each element in sequence, with access to the element's index.
+///
+/// Example:
+/// ```swift
+/// struct DocumentProcessor: Agent {
+///     var body: some Step<[Document], [ProcessedDocument]> {
+///         Map { document, index in
+///             // Process each document
+///             DocumentAnalyzer()
+///
+///             // Add metadata
+///             Transform { doc in
+///                 doc.addingMetadata(processedAt: index)
+///             }
+///         }
+///     }
+/// }
+/// ```
 public struct Map<Input: Collection & Sendable, Output: Collection & Sendable>: Step where Input.Element: Sendable, Output.Element: Sendable {
-    
+    /// A closure that produces a step to transform each element
     private let transform: (Input.Element, Int) -> any Step<Input.Element, Output.Element>
     
+    /// Creates a new map step with the specified transformation
+    ///
+    /// - Parameter transform: A closure that produces a step to transform each element.
+    ///                       The closure receives the element and its index in the collection.
     public init(
         @StepBuilder transform: @escaping (
             Input.Element,
@@ -579,6 +646,11 @@ public struct Map<Input: Collection & Sendable, Output: Collection & Sendable>: 
         self.transform = transform
     }
     
+    /// Executes the map step on the input collection
+    ///
+    /// - Parameter input: The collection to transform
+    /// - Returns: An array containing the transformed elements
+    /// - Throws: Any error that occurs during the transformation of elements
     public func run(_ input: Input) async throws -> [Output.Element] {
         var results: [Output.Element] = []
         var index = 0
@@ -594,11 +666,39 @@ public struct Map<Input: Collection & Sendable, Output: Collection & Sendable>: 
     }
 }
 
+/// A step that combines elements of a collection into a single value
+///
+/// Use `Reduce` when you need to process a collection of elements sequentially,
+/// accumulating a result as you go. Each element is processed with access to the
+/// current accumulated result and the element's index.
+///
+/// Example:
+/// ```swift
+/// struct MetricAggregator: Agent {
+///     var body: some Step<[Metric], Summary> {
+///         Reduce(initial: Summary()) { summary, metric, index in
+///             // Process each metric and update summary
+///             Transform { input in
+///                 summary.adding(metric, at: index)
+///             }
+///         }
+///     }
+/// }
+/// ```
 public struct Reduce<Input: Collection & Sendable, Output: Sendable>: Step where Input.Element: Sendable {
-    
+    /// A closure that produces a step to process each element and accumulate the result
     private let process: (Output, Input.Element, Int) -> any Step<Output, Output>
+    
+    /// The initial value for the reduction
     private let initial: Output
     
+    /// Creates a new reduce step with the specified initial value and processing step
+    ///
+    /// - Parameters:
+    ///   - initial: The initial value to start the reduction
+    ///   - process: A closure that produces a step to process each element.
+    ///             The closure receives the current accumulated value, the element,
+    ///             and the element's index in the collection.
     public init(
         initial: Output,
         @StepBuilder process: @escaping (Output, Input.Element, Int) -> any Step<Output, Output>
@@ -607,6 +707,11 @@ public struct Reduce<Input: Collection & Sendable, Output: Sendable>: Step where
         self.process = process
     }
     
+    /// Executes the reduce step on the input collection
+    ///
+    /// - Parameter input: The collection to reduce
+    /// - Returns: The final accumulated value
+    /// - Throws: Any error that occurs during the reduction process
     public func run(_ input: Input) async throws -> Output {
         var result = initial
         var index = 0
@@ -621,3 +726,82 @@ public struct Reduce<Input: Collection & Sendable, Output: Sendable>: Step where
     }
 }
 
+/// A step that joins strings together
+///
+/// Use `Join` when you need to concatenate strings with a specified separator.
+///
+/// Example:
+/// ```swift
+/// struct TextProcessor: Agent {
+///     var body: some Step<String, String> {
+///         Join(separator: " ")
+///     }
+/// }
+/// ```
+public struct Join: Step {
+    
+    public typealias Input = [String]
+    public typealias Output = String
+    
+    /// The separator to use between joined strings
+    private let separator: String
+    
+    /// Creates a new join step with the specified separator
+    ///
+    /// - Parameter separator: The string to use between joined elements
+    public init(separator: String = "") {
+        self.separator = separator
+    }
+    
+    /// Executes the join step on the input string
+    ///
+    /// - Parameter input: The string to process
+    /// - Returns: The joined string
+    public func run(_ input: Input) async throws -> Output {
+        input.joined(separator: separator)
+    }
+}
+
+/// A step that performs a simple transformation using a closure
+///
+/// Use `Transform` when you need to perform a straightforward transformation
+/// of data without the complexity of a full step implementation.
+///
+/// Example:
+/// ```swift
+/// struct DataNormalizer: Agent {
+///     var body: some Step<RawData, NormalizedData> {
+///         // Preprocess data
+///         Transform { raw in
+///             raw.preprocessed()
+///         }
+///
+///         // Apply normalization
+///         Transform { data in
+///             data.normalized()
+///         }
+///     }
+/// }
+/// ```
+public struct Transform<Input: Sendable, Output: Sendable>: Step {
+    /// The transformation closure
+    private let transformer: (Input) async throws -> Output
+    
+    /// Creates a new transform step with the specified transformation closure
+    ///
+    /// - Parameter transformer: A closure that transforms the input into the output
+    public init(
+        transformer: @escaping (Input) async throws -> Output
+    ) {
+        self.transformer = transformer
+    }
+    
+    /// Executes the transform step on the input
+    ///
+    /// - Parameter input: The value to transform
+    /// - Returns: The transformed value
+    /// - Throws: Any error that occurs during the transformation
+    public func run(_ input: Input) async throws -> Output {
+        try await transformer(input)
+    }
+}

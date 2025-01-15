@@ -7,7 +7,7 @@
 
 import Foundation
 import SwiftAgent
-import OpenAI
+import LLMChatOpenAI
 import AgentTools
 
 /// An agent implementation that leverages OpenAI's models with enhanced functionality.
@@ -34,7 +34,7 @@ public struct OpenAIAgent: Agent {
     ///
     /// The conversation history is maintained across multiple interactions
     /// to provide context for the model's responses.
-    @Memory private var messages: [ChatQuery.ChatCompletionMessageParam] = []
+    @Memory private var messages: [ChatMessage] = []
     
     /// Creates a new instance of OpenAIAgent.
     public init() {}

@@ -20,9 +20,9 @@ let package = Package(
     dependencies: [
         .package(url: "https://github.com/apple/swift-argument-parser.git", branch: "main"),
         .package(url: "https://github.com/kevinhermawan/swift-json-schema.git", branch: "main"),
+        .package(url: "https://github.com/kevinhermawan/swift-llm-chat-openai.git", branch: "main"),
         .package(url: "https://github.com/1amageek/OllamaKit.git", branch: "main"),
-        .package(url: "https://github.com/jamesrochabrun/SwiftAnthropic.git", branch: "main"),
-        .package(url: "https://github.com/MacPaw/OpenAI.git", branch: "main")
+        .package(url: "https://github.com/jamesrochabrun/SwiftAnthropic.git", branch: "main")
     ],
     targets: [
         .target(
@@ -33,7 +33,13 @@ let package = Package(
         ),
         .target(
             name: "Agents",
-            dependencies: ["SwiftAgent"]
+            dependencies: [
+                "SwiftAgent",
+                "AgentTools",
+                "SwiftAnthropic",
+                "OllamaKit",
+                .product(name: "LLMChatOpenAI", package: "swift-llm-chat-openai"),
+            ]
         ),
         .target(
             name: "AgentTools",
@@ -46,8 +52,8 @@ let package = Package(
                 "AgentTools",
                 "Agents",
                 "SwiftAnthropic",
-                "OpenAI",
                 "OllamaKit",
+                .product(name: "LLMChatOpenAI", package: "swift-llm-chat-openai"),
                 .product(name: "ArgumentParser", package: "swift-argument-parser")
             ],
             swiftSettings: [
