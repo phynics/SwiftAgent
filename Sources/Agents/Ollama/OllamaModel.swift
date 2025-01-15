@@ -128,7 +128,7 @@ public struct OllamaModel<Output: Sendable>: Model {
               let tool = tools.first(where: { $0.name == name }) else {
             return nil
         }
-        return try await tool.call("\(arguments)")
+        return try await tool.call(arguments)
     }
 }
 
