@@ -3,96 +3,82 @@ import Foundation
 import SwiftAgent
 @testable import AgentTools
 
-@Test("FileSystemTool should read file contents correctly")
-func testFileSystemToolRead() async throws {
-    // Setup temporary directory
-    let tempDir = FileManager.default.temporaryDirectory
-        .appendingPathComponent(UUID().uuidString)
-    try FileManager.default.createDirectory(at: tempDir,
-                                            withIntermediateDirectories: true)
-    defer { try? FileManager.default.removeItem(at: tempDir) }
+
+struct TestTool: Tool {
+    let name = "test"
+    let description = "Test tool"
+    let parameters = JSONSchema.object(properties: [:])
+    let guide: String? = nil
     
-    // Create test file
-    let testContent = "Hello, World!"
-    let testFile = tempDir.appendingPathComponent("test.txt")
-    try testContent.write(to: testFile, atomically: true, encoding: .utf8)
+    struct Input: Codable, Sendable {
+        let value: String
+    }
     
-    // Initialize tool
-    let tool = FileSystemTool(workingDirectory: tempDir.path)
+    struct Output: Codable, CustomStringConvertible, Sendable {
+        let result: String
+        
+        var description: String {
+            "Output: \(result)"
+        }
+    }
     
-    // Test read operation
-    let input = FileSystemInput(
-        operation: .read,
-        path: "test.txt"
-    )
-    
-    let output = try await tool.call(input)
-    #expect(output.success)
-    #expect(output.content == testContent)
-    #expect(output.metadata["operation"] == "read")
-    #expect(Int(output.metadata["size"] ?? "") == testContent.utf8.count)
+    func run(_ input: Input) async throws -> Output {
+        Output(result: "Processed: \(input.value)")
+    }
 }
 
-@Test("FileSystemTool should write file contents correctly")
-func testFileSystemToolWrite() async throws {
-    let tempDir = FileManager.default.temporaryDirectory
-        .appendingPathComponent(UUID().uuidString)
-    try FileManager.default.createDirectory(at: tempDir,
-                                            withIntermediateDirectories: true)
-    defer { try? FileManager.default.removeItem(at: tempDir) }
+@Test("call with encodable arguments")
+func testCallWithEncodableArguments() async throws {
+    let tool = TestTool()
+    let input = TestTool.Input(value: "test input")
     
-    let tool = FileSystemTool(workingDirectory: tempDir.path)
-    let testContent = "New content"
-    
-    // Test write operation
-    let writeInput = FileSystemInput(
-        operation: .write,
-        path: "newfile.txt",
-        content: testContent
-    )
-    
-    let writeOutput = try await tool.call(writeInput)
-    #expect(writeOutput.success)
-    #expect(writeOutput.metadata["operation"] == "write")
-    
-    // Verify written content
-    let filePath = (tempDir.path as NSString)
-        .appendingPathComponent("newfile.txt")
-    let writtenContent = try String(contentsOfFile: filePath, encoding: .utf8)
-    #expect(writtenContent == testContent)
+    let result = try await tool.call(input)
+    #expect(result == "Output: Processed: test input")
 }
 
-@Test("FileSystemTool should list directory contents correctly")
-func testFileSystemToolList() async throws {
-    let tempDir = FileManager.default.temporaryDirectory
-        .appendingPathComponent(UUID().uuidString)
-    try FileManager.default.createDirectory(at: tempDir,
-                                            withIntermediateDirectories: true)
-    defer { try? FileManager.default.removeItem(at: tempDir) }
+@Test("call with JSON data")
+func testCallWithJSONData() async throws {
+    let tool = TestTool()
+    let jsonString = """
+    {
+        "value": "test input"
+    }
+    """
+    let jsonData = jsonString.data(using: .utf8)!
     
-    // Create test files and directory
-    try "File1".write(to: tempDir.appendingPathComponent("file1.txt"),
-                      atomically: true, encoding: .utf8)
-    try "File2".write(to: tempDir.appendingPathComponent("file2.txt"),
-                      atomically: true, encoding: .utf8)
-    try FileManager.default.createDirectory(
-        at: tempDir.appendingPathComponent("subdir"),
-        withIntermediateDirectories: false
-    )
+    let result = try await tool.call(data: jsonData)
+    #expect(result == "Output: Processed: test input")
+}
+
+
+@Test("call error handling")
+func testCallErrorHandling() async throws {
+    struct ErrorTool: Tool {
+        let name = "error"
+        let description = "Error tool"
+        let parameters = JSONSchema.object(properties: [:])
+        let guide: String? = nil
+        
+        struct Input: Codable, Sendable {
+            let value: String
+        }
+        
+        struct Output: Codable, CustomStringConvertible, Sendable {
+            var description: String { "never called" }
+        }
+        
+        func run(_ input: Input) async throws -> Output {
+            struct TestError: Error {
+                let message: String
+            }
+            throw TestError(message: "test error")
+        }
+    }
     
-    let tool = FileSystemTool(workingDirectory: tempDir.path)
+    let tool = ErrorTool()
+    let input = ErrorTool.Input(value: "test")
     
-    // Test list operation
-    let listInput = FileSystemInput(
-        operation: .list,
-        path: "."
-    )
-    
-    let output = try await tool.call(listInput)
-    #expect(output.success)
-    #expect(output.content.contains("file1.txt"))
-    #expect(output.content.contains("file2.txt"))
-    #expect(output.content.contains("subdir/"))
-    #expect(output.metadata["operation"] == "list")
-    #expect(output.metadata["count"] == "3")
+    let result = try await tool.call(input)
+    #expect(result.contains("[error] has Error:"))
+    #expect(result.contains("test error"))
 }

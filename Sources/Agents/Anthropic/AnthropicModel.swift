@@ -28,79 +28,92 @@ import AgentTools
 ///
 /// let response = try await model.run(messages)
 /// ```
-public struct AnthropicModel: SwiftAgent.Model {
+public struct AnthropicModel<Output: Sendable>: SwiftAgent.Model {
     
     /// The input type for the model, consisting of an array of messages.
     public typealias Input = [MessageParameter.Message]
     
-    /// The output type for the model, represented as a String response.
-    public typealias Output = String
-    
     // The underlying Anthropic service client
     private let service: AnthropicService
     
-    /// The specific Anthropic model to use for generation (e.g., Claude 3 Haiku).
+    /// The specific Anthropic model to use
     public var model: SwiftAnthropic.Model
     
-    /// An array of tools available to the model for executing various tasks.
+    /// An array of tools available to the model
     public var tools: [any Tool]
     
-    /// The system prompt that provides initial context and instructions to the model.
+    /// The system prompt that provides initial context
     public var systemPrompt: String
     
-    /// Creates a new instance of AnthropicModel.
-    ///
-    /// - Parameters:
-    ///   - model: The specific Anthropic model to use. Defaults to claude35Haiku.
-    ///   - tools: An array of tools that the model can use during execution.
-    ///   - systemPrompt: A closure that generates the system prompt based on available tools.
-    /// - Throws: Fatal error if ANTHROPIC_API_KEY environment variable is not set.
+    /// Response parser for converting response to Output type
+    private let responseParser: (String) throws -> Output
+    
+    /// Creates a new instance of AnthropicModel for text output
     public init(
         model: SwiftAnthropic.Model = .claude35Haiku,
         tools: [any Tool] = [],
         systemPrompt: ([any Tool]) -> String
-    ) {
-        guard let apiKey: String = ProcessInfo.processInfo.environment["ANTHROPIC_API_KEY"] else {
+    ) where Output == String {
+        guard let apiKey = ProcessInfo.processInfo.environment["ANTHROPIC_API_KEY"] else {
             fatalError("Anthropic API Key is not set in environment variables.")
         }
+        
         self.model = model
         self.tools = tools
-        self.service = AnthropicServiceFactory.service(apiKey: apiKey, betaHeaders: nil)
         self.systemPrompt = systemPrompt(tools)
+        self.service = AnthropicServiceFactory.service(apiKey: apiKey, betaHeaders: nil)
+        self.responseParser = { $0 }
     }
     
-    /// Executes the model with the provided input messages.
-    ///
-    /// This method handles:
-    /// - Converting tools to Anthropic's expected format
-    /// - Streaming responses from the model
-    /// - Processing tool calls and their results
-    /// - Aggregating the complete response
-    ///
-    /// - Parameter input: An array of messages to process
-    /// - Returns: The complete response from the model as a string
-    /// - Throws: ModelError or underlying API errors
-    public func run(_ input: [MessageParameter.Message]) async throws -> String {
+    /// Creates a new instance of AnthropicModel with a Codable output type
+    public init(
+        model: SwiftAnthropic.Model = .claude35Haiku,
+        schema: JSONSchema, // Note: Currently not used by Anthropic, but kept for interface consistency
+        tools: [any Tool] = [],
+        systemPrompt: ([any Tool]) -> String
+    ) where Output: Codable {
+        guard let apiKey = ProcessInfo.processInfo.environment["ANTHROPIC_API_KEY"] else {
+            fatalError("Anthropic API Key is not set in environment variables.")
+        }
+        
+        self.model = model
+        self.tools = tools
+        self.systemPrompt = systemPrompt(tools)
+        self.service = AnthropicServiceFactory.service(apiKey: apiKey, betaHeaders: nil)
+        
+        // Setup the JSON response parser
+        self.responseParser = { jsonString in
+            guard let data = jsonString.data(using: .utf8) else {
+                throw AnthropicModelError.invalidResponse
+            }
+            // Note: Currently, Anthropic doesn't support direct JSON schema output
+            // We attempt to parse the response as JSON, but it may fail
+            return try JSONDecoder().decode(Output.self, from: data)
+        }
+    }
+    
+    public func run(_ input: [MessageParameter.Message]) async throws -> Output {
         // Convert tools to Anthropic format
         let anthropicTools = tools.map { tool in
             MessageParameter.Tool(
                 name: tool.name,
                 description: tool.description,
-                inputSchema: try? JSONSchema.from(tool.parameters)
+                inputSchema: try? JSONSchema.from(tool.parameters),
+                cacheControl: nil
             )
         }
-        
+
         // Build request parameters
         let parameters = MessageParameter(
             model: model,
             messages: input,
             maxTokens: 4096,
             system: .text(systemPrompt),
-            tools: anthropicTools
+            stream: false,
+            tools: anthropicTools.isEmpty ? nil : anthropicTools
         )
         
         var completeResponse = ""
-        
         let stream = try await service.streamMessage(parameters)
         
         // Process streaming response
@@ -125,20 +138,25 @@ public struct AnthropicModel: SwiftAgent.Model {
             }
         }
         
-        return completeResponse
+        // Parse and return the response
+        return try responseParser(completeResponse)
     }
     
-    /// Executes a tool call based on the model's request.
-    ///
-    /// - Parameter toolUse: The tool use request from the model
-    /// - Returns: The result of the tool execution as a string
-    /// - Throws: ModelError.toolNotFound if the requested tool doesn't exist
+    /// Executes a tool call from the model.
     private func executeToolCall(_ toolUse: MessageResponse.Content.ToolUse) async throws -> String? {
         guard let tool = tools.first(where: { $0.name == toolUse.name }) else {
-            throw ModelError.toolNotFound(toolUse.name)
+            throw AnthropicModelError.toolNotFound(toolUse.name)
         }
         return try await tool.call(toolUse.input)
     }
+}
+
+/// Errors specific to AnthropicModel
+public enum AnthropicModelError: Error {
+    case invalidResponse
+    case noContent
+    case toolNotFound(String)
+    case jsonParsingFailed
 }
 
 /// Errors that can occur during model execution.
