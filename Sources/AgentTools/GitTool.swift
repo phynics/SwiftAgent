@@ -370,7 +370,7 @@ private extension GitTool {
     
     func executeGitCommand(_ input: GitInput) async throws -> GitOutput {
         // 実行するコマンドと引数を準備
-        let arguments = [input.command] + (input.args ?? [])
+        let arguments = [input.command] + input.args
         let commandString = "git " + arguments.joined(separator: " ")
         
         let process = Process()
