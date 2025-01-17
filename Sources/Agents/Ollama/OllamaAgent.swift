@@ -19,16 +19,22 @@ public struct OllamaAgent: Agent {
     
     @Memory private var messages: [OKChatRequestData.Message] = []
         
-    public init() {}
+    var prompt: String?
+    
+    /// Creates a new instance of Agent.
+    public init(_ prompt: String? = nil) {
+        self.prompt = prompt
+    }
     
     public var body: some Step<Input, Output> {
         OllamaMessageTransform(messages: $messages)
         OllamaModel(tools: [
             ExecuteCommandTool(),
+            URLFetchTool(),
             FileSystemTool(workingDirectory: FileManager.default.currentDirectoryPath),
             GitTool()
         ]) { tools in
-            PromptTemplates
+            prompt ?? PromptTemplates
                 .systemPrompt(
                     tools: tools,
                     workingDirectory: FileManager.default.currentDirectoryPath,

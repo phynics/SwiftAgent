@@ -33,10 +33,10 @@ public struct FileSystemTool: Tool {
     """
     
     public let guide: String? = """
-    # FileSystemTool Guide
+    # filesystem Guide
     
     ## Description
-    `FileSystemTool` is a utility for performing file system operations in a controlled and safe manner. It ensures that all operations are restricted to the specified working directory and supports the following functionalities:
+    `filesystem` is a utility for performing file system operations in a controlled and safe manner. It ensures that all operations are restricted to the specified working directory and supports the following functionalities:
     - Reading file contents as UTF-8 text.
     - Writing text data to files.
     - Listing directory contents.

@@ -36,8 +36,12 @@ public struct OpenAIAgent: Agent {
     /// to provide context for the model's responses.
     @Memory private var messages: [ChatMessage] = []
     
+    var prompt: String?
+    
     /// Creates a new instance of OpenAIAgent.
-    public init() {}
+    public init(_ prompt: String? = nil) {
+        self.prompt = prompt
+    }
     
     /// The processing pipeline for the agent.
     ///
@@ -59,10 +63,11 @@ public struct OpenAIAgent: Agent {
         OpenAIMessageTransform(messages: $messages)
         OpenAIModel(tools: [
             ExecuteCommandTool(),
+            URLFetchTool(),
             FileSystemTool(workingDirectory: FileManager.default.currentDirectoryPath),
             GitTool()
         ]) { tools in
-            PromptTemplates
+            prompt ?? PromptTemplates
                 .systemPrompt(
                     tools: tools,
                     workingDirectory: FileManager.default.currentDirectoryPath,

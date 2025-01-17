@@ -619,7 +619,7 @@ public struct Loop<S: Step>: Step where S.Input == S.Output {
     public func run(_ input: Input) async throws -> Output {
         var current = input
         for _ in 0..<maxIterations {
-            let output = try await step(input).run(current)
+            let output = try await step(current).run(current)
             if try await condition().run(output) {
                 return output
             }

@@ -9,7 +9,7 @@ public struct GitTool: Tool {
     public typealias Input = GitInput
     public typealias Output = GitOutput
     
-    public let name = "git"
+    public let name = "git_control"
     
     public let description = """
     A tool for executing Git commands safely within a repository.
@@ -21,12 +21,10 @@ public struct GitTool: Tool {
     """
     
     public let guide: String? = """
-    # GitTool Guide
-    
-    > **Important Note**: Each GitTool call executes a single Git command. For operations requiring multiple commands (like commit and push), make separate calls to the tool for each command.
+    # git_control Guide
     
     ## Description
-    `GitTool` is a utility for executing Git commands safely within a repository. It provides
+    `git_control` is a utility for executing Git commands safely within a repository. It provides
     controlled access to Git operations while ensuring basic validation and safety checks.
     
     ### Key Features

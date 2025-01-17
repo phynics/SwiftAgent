@@ -42,10 +42,10 @@ public struct ExecuteCommandTool: Tool {
     """
     
     public let guide: String? = """
-    # ExecuteCommandTool Guide
+    # execute Guide
     
     ## Description
-    `ExecuteCommandTool` is a utility for executing shell commands or scripts in a controlled and safe manner. It ensures basic input validation and sanitization to prevent misuse or unsafe behavior.
+    `execute` is a utility for executing shell commands or scripts in a controlled and safe manner. It ensures basic input validation and sanitization to prevent misuse or unsafe behavior.
     
     ### Key Features
     - Run shell commands or scripts in a non-interactive environment.
