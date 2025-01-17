@@ -23,6 +23,8 @@ public struct GitTool: Tool {
     public let guide: String? = """
     # GitTool Guide
     
+    > **Important Note**: Each GitTool call executes a single Git command. For operations requiring multiple commands (like commit and push), make separate calls to the tool for each command.
+    
     ## Description
     `GitTool` is a utility for executing Git commands safely within a repository. It provides
     controlled access to Git operations while ensuring basic validation and safety checks.
@@ -66,6 +68,47 @@ public struct GitTool: Tool {
     1. **Repository Status**: Use `git status` to check repository state
     2. **Branch Operations**: Create, list, or switch branches
     3. **Commit Operations**: Create commits, view history
+    
+    ## Multiple Command Operations
+    Some Git operations typically require multiple commands to be executed in sequence. Here's how to handle these cases:
+    
+    ### Commit and Push Changes
+    This operation requires two separate tool calls:
+    1. First commit the changes
+    2. Then push to remote
+    
+    ```json
+    // First call: Commit changes
+    {
+      "command": "commit",
+      "repository": "/path/to/repo",
+      "args": ["-m", "Update feature X"]
+    }
+    
+    // Second call: Push changes
+    {
+      "command": "push",
+      "repository": "/path/to/repo",
+      "args": ["origin", "main"]
+    }
+    ```
+    
+    ### Feature Branch Creation and Switch
+    ```json
+    // First call: Create new branch
+    {
+      "command": "branch",
+      "repository": "/path/to/repo",
+      "args": ["feature/new-feature"]
+    }
+    
+    // Second call: Switch to the new branch
+    {
+      "command": "checkout",
+      "repository": "/path/to/repo",
+      "args": ["feature/new-feature"]
+    }
+    ```
     
     ## Examples
     
@@ -193,12 +236,29 @@ public struct GitTool: Tool {
 public struct GitInput: Codable, Sendable {
     public let command: String
     public let repository: String?
-    public let args: [String]?
+    public let args: [String]
     
-    public init(command: String, repository: String? = nil, args: [String]? = nil) {
+    public init(command: String, repository: String? = nil, args: [String] = []) {
         self.command = command
         self.repository = repository
         self.args = args
+    }
+    
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        command = try container.decode(String.self, forKey: .command)
+        repository = try container.decodeIfPresent(String.self, forKey: .repository)
+        
+        // Handle various array formats
+        if let argsArray = try? container.decode([String].self, forKey: .args) {
+            args = argsArray
+        } else if let argsString = try? container.decode(String.self, forKey: .args),
+                  let data = argsString.data(using: .utf8),
+                  let jsonArray = try? JSONDecoder().decode([String].self, from: data) {
+            args = jsonArray
+        } else {
+            args = []  // デフォルトは空の配列
+        }
     }
 }
 

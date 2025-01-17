@@ -123,12 +123,12 @@ extension Tool {
     public var id: String { name }
     
     public func call(_ arguments: any Encodable) async throws -> String {
-        let jsonData = try JSONEncoder().encode(arguments)
-        let args: Self.Input = try JSONDecoder().decode(
-            Input.self,
-            from: jsonData
-        )
         do {
+            let jsonData = try JSONEncoder().encode(arguments)
+            let args: Self.Input = try JSONDecoder().decode(
+                Input.self,
+                from: jsonData
+            )
             let result = try await run(args)
             return "\(result)"
         } catch {
@@ -137,11 +137,11 @@ extension Tool {
     }
     
     public func call(data: Data) async throws -> String {
-        let args: Self.Input = try JSONDecoder().decode(
-            Input.self,
-            from: data
-        )
         do {
+            let args: Self.Input = try JSONDecoder().decode(
+                Input.self,
+                from: data
+            )
             let result = try await run(args)
             return "\(result)"
         } catch {
