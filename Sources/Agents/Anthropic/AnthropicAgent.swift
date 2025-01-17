@@ -25,8 +25,9 @@ public struct AnthropicAgent: Agent {
     public var body: some Step<Input, Output> {
         AnthropicMessageTransform(messages: $messages)
         AnthropicModel(tools: [
+            ExecuteCommandTool(),
             FileSystemTool(workingDirectory: FileManager.default.currentDirectoryPath),
-            ExecuteCommandTool()
+            GitTool()
         ]) { tools in
             PromptTemplates
                 .systemPrompt(

@@ -55,9 +55,6 @@ let package = Package(
                 "OllamaKit",
                 .product(name: "LLMChatOpenAI", package: "swift-llm-chat-openai"),
                 .product(name: "ArgumentParser", package: "swift-argument-parser")
-            ],
-            swiftSettings: [
-                .define("ANTHROPIC_API_KEY")
             ]
         ),
         .testTarget(

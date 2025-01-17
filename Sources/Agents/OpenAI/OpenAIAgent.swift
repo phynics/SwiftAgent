@@ -58,8 +58,9 @@ public struct OpenAIAgent: Agent {
     public var body: some Step<String, String> {
         OpenAIMessageTransform(messages: $messages)
         OpenAIModel(tools: [
+            ExecuteCommandTool(),
             FileSystemTool(workingDirectory: FileManager.default.currentDirectoryPath),
-            ExecuteCommandTool()
+            GitTool()
         ]) { tools in
             PromptTemplates
                 .systemPrompt(

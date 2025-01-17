@@ -24,8 +24,9 @@ public struct OllamaAgent: Agent {
     public var body: some Step<Input, Output> {
         OllamaMessageTransform(messages: $messages)
         OllamaModel(tools: [
+            ExecuteCommandTool(),
             FileSystemTool(workingDirectory: FileManager.default.currentDirectoryPath),
-            ExecuteCommandTool()
+            GitTool()
         ]) { tools in
             PromptTemplates
                 .systemPrompt(

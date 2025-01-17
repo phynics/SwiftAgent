@@ -130,7 +130,6 @@ extension Tool {
         )
         do {
             let result = try await run(args)
-
             return "\(result)"
         } catch {
             return "[\(name)] has Error: \(error)"

@@ -101,6 +101,7 @@ public struct OllamaModel<Output: Sendable>: Model {
                 // Handle tool calls
                 if let toolCalls = message.toolCalls {
                     for toolCall in toolCalls {
+                        print("!!", toolCalls)
                         if let result = try await processToolCall(toolCall) {
                             toolResults.append(result)
                         }
@@ -128,6 +129,7 @@ public struct OllamaModel<Output: Sendable>: Model {
               let tool = tools.first(where: { $0.name == name }) else {
             return nil
         }
+        print("-----", arguments)
         return try await tool.call(arguments)
     }
 }
