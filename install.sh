@@ -73,7 +73,7 @@ install_package() {
         
         # Create symbolic links for executables
         if [ -f "$install_dir/AgentCLI" ]; then
-            sudo ln -sf "$install_dir/AgentCLI" "$bin_dir/agent-cli"
+            sudo ln -sf "$install_dir/AgentCLI" "$bin_dir/agent"
         fi
         
         success "Successfully installed SwiftAgent"
@@ -97,7 +97,7 @@ main() {
     
     echo
     success "SwiftAgent has been successfully installed!"
-    echo "You can now use 'agent-cli' from the command line"
+    echo "You can now use 'agent' from the command line"
 }
 
 # Run main installation process
