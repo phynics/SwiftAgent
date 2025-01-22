@@ -22,6 +22,7 @@ let package = Package(
         .package(url: "https://github.com/kevinhermawan/swift-json-schema.git", branch: "main"),
         .package(url: "https://github.com/kevinhermawan/swift-llm-chat-openai.git", branch: "main"),
         .package(url: "https://github.com/1amageek/OllamaKit.git", branch: "main"),
+        .package(url: "https://github.com/apple/swift-distributed-actors.git", branch: "main"),
         .package(url: "https://github.com/jamesrochabrun/SwiftAnthropic.git", branch: "main")
     ],
     targets: [
@@ -44,6 +45,13 @@ let package = Package(
         .target(
             name: "AgentTools",
             dependencies: ["SwiftAgent"]
+        ),
+        .target(
+            name: "AgentActor",
+            dependencies: [
+                "SwiftAgent",
+                .product(name: "DistributedCluster", package: "swift-distributed-actors")
+            ]
         ),
         .executableTarget(
             name: "AgentCLI",

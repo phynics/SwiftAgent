@@ -13,6 +13,15 @@ import LLMChatOpenAI
 public struct MainAgent: Agent {
 
     public var body: some Step<String, String> {
-        OllamaAgent()
+        Loop { _ in
+            WaitForInput(prompt: "You: ")
+            AnthropicAgent()
+                .onInput { message in
+                    print(message)
+                }
+                .onOutput { message in
+                    print(message)
+                }
+        }
     }
 }

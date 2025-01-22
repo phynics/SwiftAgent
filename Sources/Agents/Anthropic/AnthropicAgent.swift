@@ -42,14 +42,6 @@ public struct AnthropicAgent: Agent {
                     systemInfo: SystemInfo()
                 )
         }
-        .monitor(
-            input: { input in
-                print("Step received input: \(input)")
-            },
-            output: { output in
-                print("Step produced output: \(output)")
-            }
-        )
         AnthropicMessageStore(messages: $messages)
     }
 }

@@ -41,14 +41,6 @@ public struct OllamaAgent: Agent {
                     systemInfo: SystemInfo()
                 )
         }
-        .monitor(
-            input: { input in
-                print("Step received input: \(input)")
-            },
-            output: { output in
-                print("Step produced output: \(output)")
-            }
-        )
         OllamaMessageStore(messages: $messages)
     }
 }

@@ -43,6 +43,7 @@ public struct OllamaModel<Output: Sendable>: Model {
         self.format = nil
         self.options = options
         self.responseParser = { $0 }
+        print(self.systemPrompt)
     }
     
     /// Creates a new instance of OllamaModel with a Codable output type

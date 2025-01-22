@@ -1,8 +1,20 @@
 import Foundation
 
+/// A structure to generate system prompts for AI agents.
 public struct PromptTemplates {
     
-    public static func systemPrompt(tools: [any Tool], workingDirectory: String, systemInfo: SystemInfo) -> String {
+    /// Generates the complete system prompt.
+    ///
+    /// - Parameters:
+    ///   - tools: An array of available tools.
+    ///   - workingDirectory: The current working directory.
+    ///   - systemInfo: The system information.
+    /// - Returns: A formatted system prompt as a `String`.
+    public static func systemPrompt(
+        tools: [any Tool],
+        workingDirectory: String,
+        systemInfo: SystemInfo
+    ) -> String {
         """
         \(roleDescription())
         
@@ -10,69 +22,78 @@ public struct PromptTemplates {
         ===
         \(toolUsageGuide(tools: tools))
         ---
-        \(processGuidelines())
-        ---
-        EXAMPLES:
-        \(toolExamples())
+        \(executionProcess())
         """
     }
     
+    /// Describes the role and capabilities of the AI agent.
+    ///
+    /// - Returns: A description of the AI agent's role.
     static func roleDescription() -> String {
         """
         You are an AI agent with advanced capabilities in problem-solving and task execution.
-        You approach tasks methodically, breaking them down into clear steps and executing them precisely.
-        You have access to system tools that you can use to accomplish various tasks.
+        Your approach is systematic (Chain of Thought):
+        
+        1. Break down tasks into clear, logical steps.
+        2. At each step, consider whether you can solve the problem with reasoning alone or if you require external data or actions.
+        3. Execute each step precisely to achieve the desired outcome.
+        
+        You have access to system tools, but use them **only when absolutely necessary**.
+        
+        When using tools:
+        - First, analyze the task requirements to determine if the tool is truly required.
+        - If a tool is needed, choose the most appropriate one for the specific step.
+        - Clearly explain why the tool is needed and how it will be used before execution.
         """
     }
     
+    /// Provides a guide for tool usage.
+    ///
+    /// - Parameter tools: An array of available tools.
+    /// - Returns: A formatted guide for available tools and usage rules.
     static func toolUsageGuide(tools: [any Tool]) -> String {
         """
         [AVAILABLE TOOLS]:
         \(formatToolDescriptions(tools))
         
         [TOOL USAGE RULES]:
-        1. Use only one tool at a time
-        2. Format each tool use with proper XML tags
-        3. Wait for success confirmation after each tool use
-        4. Think through each step carefully before proceeding
-        5. Provide clear explanations for actions, especially for commands
+        1. Use tools only when required; avoid using tools for simple reasoning, basic instructions, or trivial tasks (e.g., greetings).
+        2. Use only one tool at a time.
+        3. Format each tool use with proper XML tags (e.g., <tool></tool>).
+        4. Wait for success confirmation after each tool use.
+        5. Think through each step carefully before proceeding.
+        6. Provide clear explanations for actions, especially for commands.
+        
+        IMPORTANT: The following tool descriptions and examples are for reference only, and do NOT imply mandatory usage.
+        Use a tool only if your Chain of Thought determines it is absolutely needed.
         """
     }
     
-    static func processGuidelines() -> String {
+    /// Describes the process guidelines for task execution.
+    ///
+    /// - Returns: A formatted guide for task execution.
+    static func executionProcess() -> String {
         """
         [EXECUTION PROCESS]:
-        1. Analyze each task thoroughly using <thinking></thinking> tags
-        2. Break complex tasks into manageable steps
-        3. Choose the most appropriate tool for each step
-        4. Execute tools one at a time, waiting for confirmation
-        5. Adjust approach based on results and feedback
-        6. Present final results clearly and concisely
+        1. Analyze each user request thoroughly using <thinking></thinking> tags.
+           - Break the request into logical steps (Chain of Thought).
+           - Evaluate whether the request can be handled with reasoning alone or requires a tool (e.g., to fetch external data).
+        2. If the request can be answered without a tool, proceed directly. For simple tasks like greetings or short answers, respond promptly and concisely.
+        3. If a tool is required, select the most appropriate one for each step.
+        4. Execute tools one at a time, waiting for confirmation before proceeding.
+        5. If the tool results influence the next step, incorporate them into your reasoning (<thinking></thinking>) before deciding further actions.
+        6. Adjust your approach based on results or feedback.
+        7. Present final results clearly and concisely.
         """
     }
     
-    static func toolExamples() -> String {
-        """
-        # Tool Use Instructions
-        
-        Tool uses are formatted using XML-style tags. Each tool has specific required and optional parameters.
-        Here's how to format your tool uses:
-        
-        ## Basic Format
-        <tool_name>
-        <parameter1>value1</parameter1>
-        <parameter2>value2</parameter2>
-        </tool_name>
-        
-        ## Important Rules
-        - Each parameter must be enclosed in its own XML tags
-        - Parameter names must match exactly
-        - Use complete XML tags (opening and closing)
-        - Only one tool use per message
-        """
-    }
-    
+    /// Formats the descriptions of available tools.
+    ///
+    /// - Parameter tools: An array of available tools.
+    /// - Returns: A formatted string containing tool descriptions.
     static func formatToolDescriptions(_ tools: [any Tool]) -> String {
-        tools.compactMap({ $0.guide }).joined(separator: "\n\n")
+        tools
+            .compactMap { $0.guide }
+            .joined(separator: "\n\n")
     }
 }

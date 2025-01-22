@@ -33,67 +33,33 @@ struct AgentCommand: AsyncParsableCommand {
         commandName: "agent",
         abstract: "AI Agent Command Line Tool",
         version: "1.0.0",
-        subcommands: [Ask.self],
-        defaultSubcommand: Ask.self
+        subcommands: [Ask.self]
     )
     
-    /// A subcommand that sends queries or tasks to the AI agent.
-    ///
-    /// The `Ask` command allows users to interact with the AI agent by sending prompts
-    /// or tasks and receiving responses. It supports various options to customize the
-    /// interaction, such as setting maximum steps and controlling output verbosity.
-    ///
-    /// Example usage:
-    /// ```bash
-    /// # Basic query
-    /// agent ask "What is the capital of France?"
-    ///
-    /// # Set maximum steps
-    /// agent ask "Plan a week-long trip" 15
-    ///
-    /// # Use quiet mode for minimal output
-    /// agent ask --quiet "Calculate 2 + 2"
-    /// ```
+    // メインコマンドの実装（サブコマンドなしの場合）
+    mutating func run() async throws {
+        print("Starting interactive AI agent session. Type 'exit' to quit.\n")
+        _ = try await MainAgent().run("")
+    }
+    
+    // Askサブコマンドの実装
     struct Ask: AsyncParsableCommand {
         static let configuration = CommandConfiguration(
             commandName: "ask",
-            abstract: "Send a prompt or task to the agent"
+            abstract: "Send a specific question to the agent for detailed analysis"
         )
         
-        /// The prompt or task to send to the agent.
-        ///
-        /// This argument specifies the text input that will be processed by the AI agent.
-        /// It can be a question, task description, or any other input the agent is designed
-        /// to handle.
-        @Argument(help: "The prompt or task for the agent")
+        @Argument(help: "The question to analyze")
         var prompt: String
         
-        /// The maximum number of processing steps the agent can take.
-        ///
-        /// This argument limits how many steps the agent can take while processing the prompt,
-        /// preventing infinite loops or excessive processing time. Defaults to 10 steps.
-        @Argument(help: "Maximum number of steps")
-        var maxSteps: Int = 10
-        
-        /// A flag to control output verbosity.
-        ///
-        /// When set, only the final answer is displayed, omitting intermediate steps
-        /// and processing information.
         @Flag(name: .shortAndLong, help: "Show only the final answer")
         var quiet: Bool = false
         
-        /// Executes the ask command with the provided arguments.
-        ///
-        /// This method validates the input and runs the agent with the specified prompt,
-        /// respecting the maximum steps and quiet mode settings.
-        ///
-        /// - Throws: ValidationError if the prompt is empty
-        /// - Throws: Any error that occurs during agent execution
         mutating func run() async throws {
             guard !prompt.isEmpty else {
-                throw ValidationError("Prompt cannot be empty")
-            }
-            let output = try await MainAgent().run(prompt)
+                throw ValidationError("Question cannot be empty")
+            }        
+            let output = try await AskAgent().run(prompt)
             print(output)
         }
     }
