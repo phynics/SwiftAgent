@@ -102,7 +102,7 @@ public struct AnthropicModel<Output: Sendable>: SwiftAgent.Model {
                 cacheControl: nil
             )
         }
-
+        
         // Build request parameters
         let parameters = MessageParameter(
             model: model,
@@ -113,41 +113,30 @@ public struct AnthropicModel<Output: Sendable>: SwiftAgent.Model {
             tools: anthropicTools.isEmpty ? nil : anthropicTools
         )
         
+        let response = try await service.createMessage(parameters)
         var completeResponse = ""
-        let stream = try await service.streamMessage(parameters)
         
-        // Process streaming response
-        for try await response in stream {
-            switch response.type {
-            case MessageStreamResponse.StreamEvent.contentBlockDelta.rawValue:
-                if let text = response.delta?.text {
-                    completeResponse += text
-                }
+        // Process response content
+        for content in response.content {
+            switch content {
+            case .text(let text):
+                completeResponse += text
                 
-            case MessageStreamResponse.StreamEvent.contentBlockStart.rawValue:
-                if let contentBlock = response.contentBlock,
-                   contentBlock.type == "tool_use",
-                   let toolUse = contentBlock.toolUse {
-                    if let result = try await executeToolCall(toolUse) {
-                        completeResponse += "\nTool result: \(result)"
-                    }
+            case .toolUse(let toolUse):
+                if let result = try await executeToolCall(toolUse) {
+                    completeResponse += "\nTool result: \(result)"
                 }
-                
-            default:
-                break
             }
-        }
-        
-        // Parse and return the response
+        }    
         return try responseParser(completeResponse)
     }
     
-    /// Executes a tool call from the model.
     private func executeToolCall(_ toolUse: MessageResponse.Content.ToolUse) async throws -> String? {
         guard let tool = tools.first(where: { $0.name == toolUse.name }) else {
             throw AnthropicModelError.toolNotFound(toolUse.name)
         }
-        return try await tool.call(toolUse.input)
+        let inputString = try JSONEncoder().encode(toolUse.input)
+        return try await tool.call(data: inputString)
     }
 }
 

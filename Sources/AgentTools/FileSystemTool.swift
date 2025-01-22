@@ -58,7 +58,6 @@ public struct FileSystemTool: Tool {
       - **Description**: The type of operation to perform. Valid values are:
         - `"read"`: Read the contents of a file.
         - `"write"`: Write text data to a file.
-        - `"list"`: List the contents of a directory.
     - **path**:
       - **Type**: `String`
       - **Description**: The relative path to the target file or directory.
@@ -79,7 +78,6 @@ public struct FileSystemTool: Tool {
     ### Common Scenarios
     1. **Reading a File**: Ensure the target file exists and contains UTF-8 encoded text.
     2. **Writing to a File**: The file will be created if it does not exist, and its content will be overwritten.
-    3. **Listing Directory Contents**: Only files and subdirectories within the target directory will be listed.
     
     ## Examples
     
@@ -124,27 +122,7 @@ public struct FileSystemTool: Tool {
     }
     ```
     
-    ### Example 3: List Directory Contents
-    ```json
-    {
-      "operation": "list",
-      "path": "projects/"
-    }
-    ```
-    **Expected Output**:
-    ```json
-    {
-      "success": true,
-      "content": "project1/\nproject2/\nREADME.md",
-      "metadata": {
-        "operation": "list",
-        "path": "projects/",
-        "count": "3"
-      }
-    }
-    ```
-    
-    ### Example 4: Attempt to Access an Unsafe Path
+    ### Example 3: Attempt to Access an Unsafe Path
     ```json
     {
       "operation": "read",
@@ -168,8 +146,8 @@ public struct FileSystemTool: Tool {
         description: "Schema for file system operations",
         properties: [
             "operation": .enum(
-                description: "The operation to perform (read/write/list)",
-                values: [.string("read"), .string("write"), .string("list")]
+                description: "The operation to perform (read/write)",
+                values: [.string("read"), .string("write")]
             ),
             "path": .string(description: "Path to the file or directory"),
             "content": .string(description: "Content to write (for write operation)")
@@ -213,8 +191,6 @@ public struct FileSystemTool: Tool {
                 )
             }
             return try await writeFile(content: content, to: normalizedPath)
-        case .list:
-            return try await listDirectory(at: normalizedPath)
         }
     }
 }
@@ -228,7 +204,6 @@ public struct FileSystemInput: Codable, Sendable {
     public enum Operation: String, Codable, Sendable {
         case read
         case write
-        case list
     }
     
     /// The operation to perform (e.g., read, write, or list).
@@ -355,46 +330,6 @@ private extension FileSystemTool {
                 metadata: [
                     "operation": "write",
                     "error": "Failed to write file: \(error.localizedDescription)"
-                ]
-            )
-        }
-    }
-    
-    func listDirectory(at path: String) async throws -> FileSystemOutput {
-        do {
-            let contents = try await fsActor.contentsOfDirectory(atPath: path)
-            let formattedContents = try await withThrowingTaskGroup(of: String.self) { group in
-                
-                let localPath = path
-                let localActor = fsActor
-                
-                for item in contents {
-                    group.addTask {
-                        let itemPath = (localPath as NSString).appendingPathComponent(item)
-                        let isDirectory = await localActor.isDirectory(atPath: itemPath)
-                        return isDirectory ? "\(item)/" : item
-                    }
-                }
-                
-                return try await group.reduce(into: []) { $0.append($1) }.sorted()
-            }
-            
-            return FileSystemOutput(
-                success: true,
-                content: formattedContents.joined(separator: "\n"),
-                metadata: [
-                    "operation": "list",
-                    "path": path,
-                    "count": "\(contents.count)"
-                ]
-            )
-        } catch {
-            return FileSystemOutput(
-                success: false,
-                content: "Failed to list directory: \(error.localizedDescription)",
-                metadata: [
-                    "operation": "list",
-                    "error": "Failed to list directory: \(error.localizedDescription)"
                 ]
             )
         }
