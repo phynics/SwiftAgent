@@ -530,200 +530,74 @@ public enum ConditionalStepError: Error {
     case noStepAvailable
 }
 
-/// A step that transforms each element in a collection using a specified step
-///
-/// Use `Map` when you need to process each element in a collection independently.
-/// The transformation is applied to each element in sequence, with access to the element's index.
-///
-/// Example:
-/// ```swift
-/// struct DocumentProcessor: Agent {
-///     var body: some Step<[Document], [ProcessedDocument]> {
-///         Map { document, index in
-///             // Process each document
-///             DocumentAnalyzer()
-///
-///             // Add metadata
-///             Transform { doc in
-///                 doc.addingMetadata(processedAt: index)
-///             }
-///         }
-///     }
-/// }
-/// ```
-public struct Map<Input: Collection & Sendable, Output: Collection & Sendable>: Step where Input.Element: Sendable, Output.Element: Sendable {
-    /// A closure that produces a step to transform each element
-    private let transform: (Input.Element, Int) -> any Step<Input.Element, Output.Element>
-    
-    /// Creates a new map step with the specified transformation
-    ///
-    /// - Parameter transform: A closure that produces a step to transform each element.
-    ///                       The closure receives the element and its index in the collection.
-    public init(
-        @StepBuilder transform: @escaping (
-            Input.Element,
-            Int
-        ) -> any Step<Input.Element, Output.Element>
-    ) {
-        self.transform = transform
-    }
-    
-    /// Executes the map step on the input collection
-    ///
-    /// - Parameter input: The collection to transform
-    /// - Returns: An array containing the transformed elements
-    /// - Throws: Any error that occurs during the transformation of elements
-    public func run(_ input: Input) async throws -> [Output.Element] {
-        var results: [Output.Element] = []
-        var index = 0
-        
-        for element in input {
-            let step = transform(element, index)
-            let partialOutput = try await step.run(element)
-            results.append(partialOutput)
-            index += 1
-        }
-        
-        return results
-    }
-}
 
-/// A step that combines elements of a collection into a single value
+/// A result builder that constructs an array of steps that can be executed in parallel.
 ///
-/// Use `Reduce` when you need to process a collection of elements sequentially,
-/// accumulating a result as you go. Each element is processed with access to the
-/// current accumulated result and the element's index.
+/// The parallel step builder provides a declarative syntax for constructing arrays of
+/// independent steps that can be executed concurrently, similar to SwiftUI's view builders.
 ///
-/// Example:
+/// Example usage:
 /// ```swift
-/// struct MetricAggregator: Agent {
-///     var body: some Step<[Metric], Summary> {
-///         Reduce(initial: Summary()) { summary, metric, index in
-///             // Process each metric and update summary
-///             Transform { input in
-///                 summary.adding(metric, at: index)
-///             }
-///         }
+/// Parallel<String, Int> {
+///     Transform { input in
+///         Int(input) ?? 0
+///     }
+///     Transform { input in
+///         input.count
 ///     }
 /// }
 /// ```
-public struct Reduce<Input: Collection & Sendable, Output: Sendable>: Step where Input.Element: Sendable {
-    /// A closure that produces a step to process each element and accumulate the result
-    private let process: (Output, Input.Element, Int) -> any Step<Output, Output>
+/// Result builder for creating arrays of steps to execute in parallel.
+@resultBuilder
+public struct ParallelStepBuilder {
     
-    /// The initial value for the reduction
-    private let initial: Output
-    
-    /// Creates a new reduce step with the specified initial value and processing step
+    /// Builds a single step into an array.
     ///
-    /// - Parameters:
-    ///   - initial: The initial value to start the reduction
-    ///   - process: A closure that produces a step to process each element.
-    ///             The closure receives the current accumulated value, the element,
-    ///             and the element's index in the collection.
-    public init(
-        initial: Output,
-        @StepBuilder process: @escaping (Output, Input.Element, Int) -> any Step<Output, Output>
-    ) {
-        self.initial = initial
-        self.process = process
+    /// - Parameter step: The step to include
+    /// - Returns: A single-element array containing the step
+    public static func buildBlock<S: Step & Sendable>(_ step: S) -> [S] where S: Sendable {
+        [step]
     }
     
-    /// Executes the reduce step on the input collection
+    /// Combines multiple steps into an array using parameter packs.
     ///
-    /// - Parameter input: The collection to reduce
-    /// - Returns: The final accumulated value
-    /// - Throws: Any error that occurs during the reduction process
-    public func run(_ input: Input) async throws -> Output {
-        var result = initial
-        var index = 0
-        
-        for element in input {
-            let step = process(result, element, index)
-            result = try await step.run(result)
-            index += 1
-        }
-        
-        return result
-    }
-}
-
-/// A step that joins strings together
-///
-/// Use `Join` when you need to concatenate strings with a specified separator.
-///
-/// Example:
-/// ```swift
-/// struct TextProcessor: Agent {
-///     var body: some Step<String, String> {
-///         Join(separator: " ")
-///     }
-/// }
-/// ```
-public struct Join: Step {
-    
-    public typealias Input = [String]
-    public typealias Output = String
-    
-    /// The separator to use between joined strings
-    private let separator: String
-    
-    /// Creates a new join step with the specified separator
-    ///
-    /// - Parameter separator: The string to use between joined elements
-    public init(separator: String = "") {
-        self.separator = separator
+    /// - Parameter steps: The steps to combine
+    /// - Returns: An array containing all steps
+    public static func buildBlock<each S: Step & Sendable>(_ steps: repeat each S) -> [any Step & Sendable] {
+        var collection: [any Step & Sendable] = []
+        repeat collection.append(each steps)
+        return collection
     }
     
-    /// Executes the join step on the input string
+    /// Handles optional steps.
     ///
-    /// - Parameter input: The string to process
-    /// - Returns: The joined string
-    public func run(_ input: Input) async throws -> Output {
-        input.joined(separator: separator)
-    }
-}
-
-/// A step that performs a simple transformation using a closure
-///
-/// Use `Transform` when you need to perform a straightforward transformation
-/// of data without the complexity of a full step implementation.
-///
-/// Example:
-/// ```swift
-/// struct DataNormalizer: Agent {
-///     var body: some Step<RawData, NormalizedData> {
-///         // Preprocess data
-///         Transform { raw in
-///             raw.preprocessed()
-///         }
-///
-///         // Apply normalization
-///         Transform { data in
-///             data.normalized()
-///         }
-///     }
-/// }
-/// ```
-public struct Transform<Input: Sendable, Output: Sendable>: Step {
-    /// The transformation closure
-    private let transformer: (Input) async throws -> Output
-    
-    /// Creates a new transform step with the specified transformation closure
-    ///
-    /// - Parameter transformer: A closure that transforms the input into the output
-    public init(
-        transformer: @escaping (Input) async throws -> Output
-    ) {
-        self.transformer = transformer
+    /// - Parameter step: The optional step
+    /// - Returns: Array containing the step if present, empty array if nil
+    public static func buildOptional<S: Step & Sendable>(_ step: [S]?) -> [S] {
+        step ?? []
     }
     
-    /// Executes the transform step on the input
+    /// Handles the true path of a conditional.
     ///
-    /// - Parameter input: The value to transform
-    /// - Returns: The transformed value
-    /// - Throws: Any error that occurs during the transformation
-    public func run(_ input: Input) async throws -> Output {
-        try await transformer(input)
+    /// - Parameter first: The steps to include if condition is true
+    /// - Returns: The provided array of steps
+    public static func buildEither<S: Step & Sendable>(first: [S]) -> [S] {
+        first
+    }
+    
+    /// Handles the false path of a conditional.
+    ///
+    /// - Parameter second: The steps to include if condition is false
+    /// - Returns: The provided array of steps
+    public static func buildEither<S: Step & Sendable>(second: [S]) -> [S] {
+        second
+    }
+    
+    /// Handles arrays of steps.
+    ///
+    /// - Parameter components: Array of arrays of steps
+    /// - Returns: Flattened array containing all steps
+    public static func buildArray<S: Step & Sendable>(_ components: [[S]]) -> [S] {
+        components.flatMap { $0 }
     }
 }
