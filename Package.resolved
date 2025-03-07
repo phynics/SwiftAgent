@@ -1,5 +1,5 @@
 {
-  "originHash" : "0c0ad6177ee1ecb5dbdfde65334701b743c74de6dd5013d2c5b9a777f1b724a3",
+  "originHash" : "5d162d316d363de8024220bfa4ab5a6ddae475b6745797b0a40af470ff47761e",
   "pins" : [
     {
       "identity" : "generative-ai-swift",
@@ -94,7 +94,7 @@
     {
       "identity" : "swift-json-schema",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/kevinhermawan/swift-json-schema.git",
+      "location" : "https://github.com/1amageek/swift-json-schema.git",
       "state" : {
         "branch" : "main",
         "revision" : "b6e888849bb2e6c2660c4c3bc156219a2f295a40"
@@ -103,7 +103,7 @@
     {
       "identity" : "swift-llm-chat-openai",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/kevinhermawan/swift-llm-chat-openai.git",
+      "location" : "https://github.com/1amageek/swift-llm-chat-openai.git",
       "state" : {
         "branch" : "main",
         "revision" : "3ffffb4b85b3b764d72ef49adedce142bbd49e6c"

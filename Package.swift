@@ -19,8 +19,8 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-argument-parser.git", branch: "main"),
-        .package(url: "https://github.com/kevinhermawan/swift-json-schema.git", branch: "main"),
-        .package(url: "https://github.com/kevinhermawan/swift-llm-chat-openai.git", branch: "main"),
+        .package(url: "https://github.com/1amageek/swift-json-schema.git", branch: "main"),
+        .package(url: "https://github.com/1amageek/swift-llm-chat-openai.git", branch: "main"),
         .package(url: "https://github.com/1amageek/OllamaKit.git", branch: "main"),
         .package(url: "https://github.com/apple/swift-distributed-actors.git", branch: "main"),
         .package(url: "https://github.com/jamesrochabrun/SwiftAnthropic.git", branch: "main"),

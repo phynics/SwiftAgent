@@ -8,6 +8,7 @@
 import Foundation
 import SwiftAgent
 import AgentTools
+import JSONSchema
 @preconcurrency import SwiftAnthropic
 
 /// A concrete implementation of the Model protocol using SwiftAnthropic's API.
