@@ -44,7 +44,6 @@ public struct GeminiAgent: Agent {
         // Process with Gemini model and available tools
         GeminiModel(
             modelName: "gemini-2.0-pro-exp-02-05",
-            temperature: 0.7,
             tools: createTools()
         ) { tools in
             prompt ?? PromptTemplates
