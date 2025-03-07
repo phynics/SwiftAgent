@@ -32,7 +32,7 @@ public struct OllamaModel<Output: Sendable>: Model {
     
     /// Creates a new instance of OllamaModel for text output
     public init(
-        model: String = "llama3.2:latest",
+        model: String = "hf.co/SakanaAI/TinySwallow-1.5B-Instruct-GGUF:latest",
         options: OKCompletionOptions? = nil,
         tools: [any Tool] = [],
         systemPrompt: ([any Tool]) -> String
@@ -47,7 +47,7 @@ public struct OllamaModel<Output: Sendable>: Model {
     
     /// Creates a new instance of OllamaModel with a Codable output type
     public init(
-        model: String = "llama3.2:latest",
+        model: String = "hf.co/SakanaAI/TinySwallow-1.5B-Instruct-GGUF:latest",
         options: OKCompletionOptions? = nil,
         schema: JSONSchema,
         tools: [any Tool] = [],

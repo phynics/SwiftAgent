@@ -61,6 +61,8 @@ public struct URLFetchTool: Tool {
     public let guide: String? = """
     # url_fetch Guide
     
+    function_name: url_fetch
+    
     ## Description
     `url_fetch` retrieves data from a specified URL via HTTP GET requests.
     

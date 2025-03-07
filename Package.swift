@@ -23,7 +23,8 @@ let package = Package(
         .package(url: "https://github.com/kevinhermawan/swift-llm-chat-openai.git", branch: "main"),
         .package(url: "https://github.com/1amageek/OllamaKit.git", branch: "main"),
         .package(url: "https://github.com/apple/swift-distributed-actors.git", branch: "main"),
-        .package(url: "https://github.com/jamesrochabrun/SwiftAnthropic.git", branch: "main")
+        .package(url: "https://github.com/jamesrochabrun/SwiftAnthropic.git", branch: "main"),
+        .package(url: "https://github.com/google-gemini/generative-ai-swift.git", branch: "main")
     ],
     targets: [
         .target(
@@ -39,6 +40,7 @@ let package = Package(
                 "AgentTools",
                 "SwiftAnthropic",
                 "OllamaKit",
+                .product(name: "GoogleGenerativeAI", package: "generative-ai-swift"),
                 .product(name: "LLMChatOpenAI", package: "swift-llm-chat-openai"),
             ]
         ),

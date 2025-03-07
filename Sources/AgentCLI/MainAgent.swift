@@ -15,10 +15,7 @@ public struct MainAgent: Agent {
     public var body: some Step<String, String> {
         Loop { _ in
             WaitForInput(prompt: "You: ")
-            AnthropicAgent()
-                .onInput { message in
-                    print(message)
-                }
+            OllamaAgent()
                 .onOutput { message in
                     print(message)
                 }

@@ -1,6 +1,15 @@
 {
-  "originHash" : "43ae37741836ef7a614ad7391141b47b2ab11737da44c75fa6202adc60e9d9f3",
+  "originHash" : "3921aadb2c846f14c255de3bb23c2c5090b273d1b53c0cde97d5f36eb51df23f",
   "pins" : [
+    {
+      "identity" : "generative-ai-swift",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/google-gemini/generative-ai-swift.git",
+      "state" : {
+        "branch" : "main",
+        "revision" : "31d3eb8b399deb288373b99953a8dec5c11bcb57"
+      }
+    },
     {
       "identity" : "ollamakit",
       "kind" : "remoteSourceControl",
