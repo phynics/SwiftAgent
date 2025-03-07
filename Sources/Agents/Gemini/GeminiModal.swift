@@ -61,6 +61,76 @@ public struct GeminiModel<Output: Sendable>: SwiftAgent.Model {
         self.responseParser = { $0 }
     }
     
+    /// Creates a new instance of GeminiModel with a Codable output type
+    public init(
+        modelName: String = "gemini-2.0-pro-exp-02-05",
+        config: GoogleGenerativeAI.GenerationConfig? = nil,
+        schema: JSONSchema,
+        tools: [any SwiftAgent.Tool] = [],
+        systemPrompt: ([any SwiftAgent.Tool]) -> String
+    ) where Output: Codable {
+        guard let apiKey = ProcessInfo.processInfo.environment["GOOGLE_GENAI_API_KEY"] else {
+            fatalError("Google API Key is not set in environment variables.")
+        }
+        
+        // Convert JSONSchema to GoogleGenerativeAI Schema
+        let responseSchema: Schema?
+        do {
+            responseSchema = try SchemaConverter.convert(schema)
+        } catch {
+            print("Warning: Failed to convert response schema: \(error)")
+            responseSchema = nil
+        }
+        
+        let generationConfig = GenerationConfig(
+            temperature: config?.temperature,
+            topP: config?.topP,
+            topK: config?.topK,
+            maxOutputTokens: config?.maxOutputTokens,
+            responseMIMEType: "application/json",
+            responseSchema: responseSchema
+        )
+        
+        self.tools = tools
+        self.systemPrompt = systemPrompt(tools)
+        
+        // Convert SwiftAgent tools to GoogleGenerativeAI tools
+        let geminiTools: [GoogleGenerativeAI.Tool]?
+        if tools.isEmpty {
+            geminiTools = nil
+        } else {
+            do {
+                let functionDeclarations = try tools.map { tool in
+                    try FunctionDeclarationConverter.convert(from: tool)
+                }
+                geminiTools = [GoogleGenerativeAI.Tool(functionDeclarations: functionDeclarations)]
+            } catch {
+                print("Warning: Failed to convert tools: \(error)")
+                geminiTools = nil
+            }
+        }
+        
+        self.model = GoogleGenerativeAI.GenerativeModel(
+            name: modelName,
+            apiKey: apiKey,
+            generationConfig: generationConfig,
+            tools: geminiTools,
+            systemInstruction: ModelContent(role: "system", parts: [.text(self.systemPrompt)])
+        )
+        
+        // Setup JSON response parser
+        self.responseParser = { jsonString in
+            guard let data = jsonString.data(using: .utf8) else {
+                throw GeminiModelError.invalidResponse
+            }
+            do {
+                return try JSONDecoder().decode(Output.self, from: data)
+            } catch {
+                throw GeminiModelError.jsonParsingError(error)
+            }
+        }
+    }
+    
     public func run(_ input: [GoogleGenerativeAI.ModelContent]) async throws -> Output {
         var completeResponse = ""
         
