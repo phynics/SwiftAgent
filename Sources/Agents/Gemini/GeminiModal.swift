@@ -5,6 +5,7 @@ import AgentTools
 
 /// A concrete implementation of the Model protocol using Google's Gemini API.
 public struct GeminiModel<Output: Sendable>: SwiftAgent.Model {
+    
     public typealias Input = [GoogleGenerativeAI.ModelContent]
     
     /// The underlying Gemini model instance
@@ -21,20 +22,20 @@ public struct GeminiModel<Output: Sendable>: SwiftAgent.Model {
     
     /// Creates a new instance of GeminiModel for text output
     public init(
-        modelName: String = "gemini-1.5-pro-latest",
+        modelName: String = "gemini-2.0-pro-exp-02-05",
         temperature: Float = 0.7,
         tools: [any SwiftAgent.Tool] = [],
         systemPrompt: ([any SwiftAgent.Tool]) -> String
     ) where Output == String {
-        guard let apiKey = ProcessInfo.processInfo.environment["GOOGLE_API_KEY"] else {
+        guard let apiKey = ProcessInfo.processInfo.environment["GOOGLE_GENAI_API_KEY"] else {
             fatalError("Google API Key is not set in environment variables.")
         }
-        
+
         let generationConfig = GoogleGenerativeAI.GenerationConfig(
             temperature: temperature,
             topP: 0.95,
             topK: 40,
-            maxOutputTokens: 1024
+            maxOutputTokens: 4096
         )
         
         self.tools = tools
@@ -69,13 +70,13 @@ public struct GeminiModel<Output: Sendable>: SwiftAgent.Model {
     
     /// Creates a new instance of GeminiModel with a Codable output type
     public init(
-        modelName: String = "gemini-1.5-pro-latest",
+        modelName: String = "gemini-2.0-pro-exp-02-05",
         temperature: Float = 0.7,
         schema: JSONSchema,
         tools: [any SwiftAgent.Tool] = [],
         systemPrompt: ([any SwiftAgent.Tool]) -> String
     ) where Output: Codable {
-        guard let apiKey = ProcessInfo.processInfo.environment["GOOGLE_API_KEY"] else {
+        guard let apiKey = ProcessInfo.processInfo.environment["GOOGLE_GENAI_API_KEY"] else {
             fatalError("Google API Key is not set in environment variables.")
         }
         
@@ -92,7 +93,7 @@ public struct GeminiModel<Output: Sendable>: SwiftAgent.Model {
             temperature: temperature,
             topP: 0.95,
             topK: 40,
-            maxOutputTokens: 1024,
+            maxOutputTokens: 4096,
             responseMIMEType: "application/json",
             responseSchema: responseSchema
         )
@@ -141,7 +142,6 @@ public struct GeminiModel<Output: Sendable>: SwiftAgent.Model {
         var completeResponse = ""
         
         let response = try await model.generateContent(input)
-        
         if let promptFeedback = response.promptFeedback,
            let blockReason = promptFeedback.blockReason {
             throw GeminiModelError.promptBlocked(reason: blockReason.rawValue)

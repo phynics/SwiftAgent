@@ -21,21 +21,31 @@ public struct SchemaConverter {
         
         // Get type
         let typeString = jsonObject["type"] as? String ?? "object"
-        let dataType = mapJSONSchemaTypeToDataType(typeString)
         
-        // Get description
+        // Handle special case for properties that have enum values
+        if let enumValues = getEnumValues(from: jsonObject) {
+            // If it has enum values, treat it as a string with enum format
+            return Schema(
+                type: .string,
+                format: "enum",
+                description: jsonObject["description"] as? String,
+                enumValues: enumValues
+            )
+        }
+        
+        // For regular types, continue with normal processing
+        let dataType = mapJSONSchemaTypeToDataType(typeString)
         let description = jsonObject["description"] as? String
         
         // Build the schema based on type
         switch dataType {
         case .string:
-            let enumValues = getEnumValues(from: jsonObject)
-            let format = enumValues != nil ? "enum" : nil
+            // For string type, check for special format or pattern
+            let format = jsonObject["format"] as? String
             return Schema(
                 type: dataType,
                 format: format,
-                description: description,
-                enumValues: enumValues
+                description: description
             )
             
         case .number, .integer:
@@ -121,6 +131,7 @@ public struct SchemaConverter {
     /// - Parameter jsonObject: The JSON object
     /// - Returns: Array of enum values if available
     private static func getEnumValues(from jsonObject: [String: Any]) -> [String]? {
+        // Check for direct enum property
         if let enumValues = jsonObject["enum"] as? [Any] {
             return enumValues.compactMap { value in
                 if let string = value as? String {
@@ -148,35 +159,27 @@ public struct SchemaConverter {
     /// - Parameter jsonObject: The JSON object
     /// - Returns: A tuple of properties dictionary and required properties array
     private static func extractObjectProperties(from jsonObject: [String: Any]) throws -> ([String: Schema]?, [String]?) {
-        var properties: [String: [String: Any]]? = nil
+        var schemaProperties: [String: Schema]? = nil
         var required: [String]? = nil
         
-        // Try to get properties directly from the json object
-        if let props = jsonObject["properties"] as? [String: [String: Any]] {
-            properties = props
+        // 直接プロパティを取得
+        if let properties = jsonObject["properties"] as? [String: [String: Any]] {
+            schemaProperties = [:]
+            
+            for (propertyName, propertyValue) in properties {
+                let propertyData = try JSONSerialization.data(withJSONObject: propertyValue)
+                let propertyJsonSchema = try JSONDecoder().decode(JSONSchema.self, from: propertyData)
+                let convertedSchema = try convert(propertyJsonSchema)
+                schemaProperties?[propertyName] = convertedSchema
+            }
         }
         
-        // If not found, try to extract from objectSchema
-        if properties == nil, let objectSchema = jsonObject["objectSchema"] as? [String: Any] {
-            properties = objectSchema["properties"] as? [String: [String: Any]]
-            required = objectSchema["required"] as? [String]
+        // 必須フィールドを取得
+        if let requiredProps = jsonObject["required"] as? [String] {
+            required = requiredProps
         }
         
-        // If still not found, return nil
-        guard let properties = properties else {
-            return (nil, required)
-        }
-        
-        var schemaProperties: [String: Schema] = [:]
-        
-        for (propertyName, propertyValue) in properties {
-            let propertyData = try JSONSerialization.data(withJSONObject: propertyValue)
-            let propertyJsonSchema = try JSONDecoder().decode(JSONSchema.self, from: propertyData)
-            let convertedSchema = try convert(propertyJsonSchema)
-            schemaProperties[propertyName] = convertedSchema
-        }
-        
-        return (schemaProperties.isEmpty ? nil : schemaProperties, required)
+        return (schemaProperties, required)
     }
 }
 
@@ -198,19 +201,20 @@ public struct FunctionDeclarationConverter {
         var properties: [String: Schema]? = nil
         var requiredProperties: [String]? = nil
         
-        // Try to extract from objectSchema
-        if let objectSchema = jsonObject["objectSchema"] as? [String: Any] {
-            if let props = objectSchema["properties"] as? [String: [String: Any]] {
-                properties = [:]
-                for (propName, propValue) in props {
-                    // Convert each property to a Schema
-                    let propData = try JSONSerialization.data(withJSONObject: propValue)
-                    let propSchema = try JSONDecoder().decode(JSONSchema.self, from: propData)
-                    properties?[propName] = try SchemaConverter.convert(propSchema)
-                }
+        // プロパティを直接取得
+        if let props = jsonObject["properties"] as? [String: [String: Any]] {
+            properties = [:]
+            for (propName, propValue) in props {
+                // Convert each property to a Schema
+                let propData = try JSONSerialization.data(withJSONObject: propValue)
+                let propSchema = try JSONDecoder().decode(JSONSchema.self, from: propData)
+                properties?[propName] = try SchemaConverter.convert(propSchema)
             }
-            
-            requiredProperties = objectSchema["required"] as? [String]
+        }
+        
+        // 必須フィールドを直接取得
+        if let required = jsonObject["required"] as? [String] {
+            requiredProperties = required
         }
         
         return FunctionDeclaration(
