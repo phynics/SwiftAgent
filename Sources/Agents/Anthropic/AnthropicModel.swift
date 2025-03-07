@@ -119,15 +119,19 @@ public struct AnthropicModel<Output: Sendable>: SwiftAgent.Model {
         // Process response content
         for content in response.content {
             switch content {
-            case .text(let text):
+            case .text(let text, _):
                 completeResponse += text
                 
             case .toolUse(let toolUse):
                 if let result = try await executeToolCall(toolUse) {
                     completeResponse += "\nTool result: \(result)"
                 }
+                
+            case .thinking(let thinking):
+                // thinkingの処理を追加
+                completeResponse += "\nThinking: \(thinking.thinking)"
             }
-        }    
+        }
         return try responseParser(completeResponse)
     }
     
