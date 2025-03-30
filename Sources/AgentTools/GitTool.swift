@@ -23,6 +23,8 @@ public struct GitTool: Tool {
     public let guide: String? = """
     # git_control Guide
     
+    function_name: git_control
+    
     ## Description
     `git_control` is a utility for executing Git commands safely within a repository. It provides
     controlled access to Git operations while ensuring basic validation and safety checks.

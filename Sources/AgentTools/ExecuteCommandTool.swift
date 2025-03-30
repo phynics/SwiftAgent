@@ -44,6 +44,8 @@ public struct ExecuteCommandTool: Tool {
     public let guide: String? = """
     # execute Guide
     
+    function_name: execute
+    
     ## Description
     `execute` is a utility for executing shell commands or scripts in a controlled and safe manner. It ensures basic input validation and sanitization to prevent misuse or unsafe behavior.
     

@@ -85,6 +85,7 @@ public protocol Tool: Identifiable, Step where Input: Codable, Output: Codable &
     ///   ```markdown
     ///   # Tool Name
     ///   ExampleTool
+    ///   function_name: `name`
     ///
     ///   ## Description
     ///   This tool calculates the length of a string.

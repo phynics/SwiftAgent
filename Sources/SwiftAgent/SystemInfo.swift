@@ -107,7 +107,7 @@ public struct SystemInfo: CustomStringConvertible {
     /// Provides a human-readable description of the system information
     public var description: String {
         """
-        [SYSTEM INFORMATION]
+        [SYSTEM INFORMATION]:
         Platform: \(platform)
         Version: \(version)
         Application Directory: \(applicationDirectory)

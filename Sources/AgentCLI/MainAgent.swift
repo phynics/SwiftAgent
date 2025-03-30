@@ -15,10 +15,7 @@ public struct MainAgent: Agent {
     public var body: some Step<String, String> {
         Loop { _ in
             WaitForInput(prompt: "You: ")
-            OpenAIAgent()
-                .onInput { message in
-                    print(message)
-                }
+            GeminiAgent()
                 .onOutput { message in
                     print(message)
                 }

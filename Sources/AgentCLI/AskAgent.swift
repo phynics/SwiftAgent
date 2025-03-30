@@ -14,7 +14,7 @@ public struct AskAgent: Agent {
     
     public var body: some Step<String, String> {
         Loop(max: 3) { _ in
-            OllamaAgent()
+            GeminiAgent()
                 .onOutput { message in
                     print(message)
                 }
